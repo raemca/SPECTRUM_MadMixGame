@@ -1,0 +1,18 @@
+; !!! AVISO -- LEE ESTO ANTES DE EDITAR !!!
+; Ingenieria inversa, herramientas y documentacion de este proyecto: Rafael Eduardo Martin Candial (raemca@hotmail.com)
+; Guion de sonido de 25_subpatron_A_de94.spt -- 9 bytes.
+; Motor RESUELTO sesion 55 (ver ISR_SONIDO en madmix_body.asm). Puedes
+; cambiar el VALOR de una nota o el destino de un CALL; NO añadas ni
+; quites lineas -- el tamaño es FIJO, el motor lee estos bytes
+; directamente desde RAM en las direcciones originales.
+; bytes=9
+
+NOTE 0x98
+NOTE 0x15
+NOTE 0x53
+NOTE 0x52
+NOTE 0x12
+RESET
+NOTE 0x02
+RESET
+RETURN

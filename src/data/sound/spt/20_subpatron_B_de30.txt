@@ -1,0 +1,26 @@
+; !!! AVISO -- LEE ESTO ANTES DE EDITAR !!!
+; Ingenieria inversa, herramientas y documentacion de este proyecto: Rafael Eduardo Martin Candial (raemca@hotmail.com)
+; Guion de sonido de 20_subpatron_B_de30.spt -- 17 bytes.
+; Motor RESUELTO sesion 55 (ver ISR_SONIDO en madmix_body.asm). Puedes
+; cambiar el VALOR de una nota o el destino de un CALL; NO añadas ni
+; quites lineas -- el tamaño es FIJO, el motor lee estos bytes
+; directamente desde RAM en las direcciones originales.
+; bytes=17
+
+NOTE 0x01
+RESET
+NOTE 0x03
+RESET
+NOTE 0x01
+RESET
+NOTE 0x03
+RESET
+NOTE 0x01
+RESET
+NOTE 0x03
+RESET
+NOTE 0x00
+NOTE 0x03
+NOTE 0x03
+NOTE 0x03
+RETURN

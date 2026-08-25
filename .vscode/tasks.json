@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compilar todo",
+            "type": "shell",
+            "command": "py",
+            "args": [
+                "tools/build_all.py"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Generar tzx",
+            "type": "shell",
+            "command": "py",
+            "args": [
+                "tools/gen_tzx_file.py"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Compilar todo + generar tzx",
+            "dependsOn": [
+                "Compilar todo",
+                "Generar tzx"
+            ],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

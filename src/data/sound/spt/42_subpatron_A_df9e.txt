@@ -1,0 +1,18 @@
+; !!! AVISO -- LEE ESTO ANTES DE EDITAR !!!
+; Ingenieria inversa, herramientas y documentacion de este proyecto: Rafael Eduardo Martin Candial (raemca@hotmail.com)
+; Guion de sonido de 42_subpatron_A_df9e.spt -- 25 bytes.
+; Motor RESUELTO sesion 55 (ver ISR_SONIDO en madmix_body.asm). Puedes
+; cambiar el VALOR de una nota o el destino de un CALL; NO añadas ni
+; quites lineas -- el tamaño es FIJO, el motor lee estos bytes
+; directamente desde RAM en las direcciones originales.
+; bytes=25
+
+CALL 0xDF48
+CALL 0xDF54
+CALL 0xDF60
+CALL 0xDF6C
+CALL 0xDF48
+CALL 0xDF54
+CALL 0xDF60
+CALL 0xDF7A
+RETURN

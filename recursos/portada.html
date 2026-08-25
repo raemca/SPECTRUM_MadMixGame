@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<!-- Ingenieria inversa, herramientas y documentacion: Rafael Eduardo Martin Candial (raemca@hotmail.com) -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mad Mix Game (Spectrum) -- portada reconstruida</title>
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --fg: #2a2621;
+    --panel: #ffffff;
+    --border: #ddd6cc;
+    --muted: #7a7266;
+    --accent-sprite: #ae6a8f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1a17;
+      --fg: #ece6da;
+      --panel: #262320;
+      --border: #3a352e;
+      --muted: #a39a8a;
+      --accent-sprite: #c47fa4;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem clamp(1rem, 4vw, 3rem);
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+  .subtitle { color: var(--muted); margin-top: 0; }
+  .note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent-sprite);
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin: 1rem 0 2rem 0;
+    font-size: 0.92rem;
+  }
+  .note code { font-family: "SFMono-Regular", Consolas, monospace; }
+  .controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    font-size: 0.92rem;
+  }
+  .cover-wrap {
+    background: #000;
+    border-radius: 6px;
+    padding: 8px;
+    width: max-content;
+    max-width: 100%;
+    overflow: auto;
+  }
+  .cover-wrap canvas {
+    image-rendering: pixelated;
+    display: block;
+    width: 512px;
+    height: 384px;
+    max-width: 100%;
+  }
+  footer {
+    margin-top: 2rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+  code { font-family: "SFMono-Regular", Consolas, monospace; }
+</style>
+</head>
+<body>
+
+<h1>Mad Mix Game (Spectrum) -- portada reconstruida</h1>
+<p class="attribution-line" style="color:var(--muted);font-size:0.85rem;margin:-0.3rem 0 1.2rem 0;">Ingenieria inversa, herramientas y documentacion: Rafael Eduardo Martin Candial (raemca@hotmail.com)</p>
+<p class="subtitle">Reconstruccion de la pantalla de carga/portada a partir de los datos crudos de <code>PANTALLA_CARGA</code> (<code>SCREEN.bin</code>) -- ver <code>src/FINDINGS.md</code> para el detalle tecnico completo.</p>
+
+<div class="note">
+  <strong>De donde sale esto</strong>: <code>PANTALLA_CARGA</code> ($4000,
+  6912 bytes, <code>load_cas/screen_body.asm</code>) es el bitmap de
+  pantalla completo cargado por <code>LOADER.bin</code> directamente en
+  la memoria de video del Spectrum, SIN comprimir -- formato de pantalla
+  estandar del ZX Spectrum: 6144 bytes de patron de pixeles
+  ($4000-$57FF, con el orden de filas entrelazado clasico del hardware:
+  3 tercios de 64 filas, cada tercio agrupado en 8 bloques de 8 filas)
+  + 768 bytes de atributos de color ($5800-$5AFF, una celda de 8x8 px
+  por byte: INK/PAPER de 3 bits + BRIGHT + FLASH). Paleta est&aacute;ndar
+  de 15 colores del ZX Spectrum (8 tintas x normal/brillante, con el
+  negro compartido). A diferencia de la version MSX (que reconstruye la
+  portada desde datos COMPRIMIDOS con un algoritmo de nibbles, ver
+  <code>portada.html</code> del proyecto hermano), aqui no hace falta
+  descomprimir nada: es la <strong>version original</strong>, el
+  formato mas simple y directo posible en el hardware del Spectrum.
+</div>
+
+<div class="controls">
+  <label><input type="checkbox" id="flashToggle"> animar FLASH (parpadeo de atributo, ~1.6&nbsp;Hz)</label>
+</div>
+
+<div class="cover-wrap">
+  <canvas id="cover" width="256" height="192"></canvas>
+</div>
+
+<footer>
+  Datos extraidos directamente de <code>data/img/pantalla_carga.img</code>
+  (byte a byte, ya verificado 0 diferencias contra el <code>.tzx</code>
+  original) -- la decodificacion en JS reproduce el formato de memoria
+  de video est&aacute;ndar del ZX Spectrum 48K, no es una aproximacion visual.
+</footer>
+
+<script>
+const SCREEN_HEX = "0000000000000000000000000000000000000000000000000000000000000000000000000000015b600000000000000000000000000000000000000000000000000000000000076de000000000000000000000000000000000000000010a000000008040000017ffc7d100e00000ffffff000000000000000000000020ef000000005fffa2007beff7f98fc0ffffffff81ffff00000000000000000128fe00000000eb7fff2a747ff7ff03ffffffffffffffffff0000000001e002abff7f000000005f681515064ff0bf9ffffffffffffffffffff800002553bdfd5500000000000083ee80bff50a4461ffffffffffffffffffffff40205fc440c014d3f500000000000000000000000000000000000000000000000000000000000000000000000000000000011a6000000000000000000000000000000000000000000000000000000000000f7db0000000000000000000000000000000000000000015000000001030000017fff3eaa0c00007ffffffe000000000000000000000415f000000002aff5100fbeff7fce6c1ffffffff007fff80000000000000000214d500000000c02ffef53c7f77ff01ffffffffffffffffff000000000e000917ff7f00000000af642a2a834fe00f1ffffffffffffffffffff8000042db7dfa0006f00000000055ef527ffa053007feffffffffffffffffffff6882beaa80002af7fe00000000000000000000000000000000000000000000000000000000000000000000000000000000033c7000000000000000000000000000000000000000000000000000000000000f7de000000000000000000000000000000000000000042b00000000aa0c000037fff9ff50c0003ffffffffc0000000000000000000040df0000000005afe880fdf7f7fff6c3ffffffff003fffc000000000000000042eea00000000f015fefa8c7ff7ff01ffffffffffffffffff800000007005537fff7f00000000556a04555127e0003ffffffffffffffffffffc0000055afdd500680c00000000aaeea0bffd0a111ffeffffffffffffffffff7f6005554002055777ff0000000000000000000f000000000000000000000000000000000000000000000000000000000000027cf000000000000000000000000000000000000000000300000000c00000000efefc0fc00000000000000000000000000000000000085f000000005403000037bfdcffe48000ffffffffff0000000000000000000041bf000000002057d460fdf7fbdf3ee7ffffffff801fffe000000000000000085ed000000000f10bfeff403fbbff01ffffffffffffffffffc0000001800aab7fffbf000000000fa5088ea083cc003ffffffffffffffffffffc00008bdafca806800300000000f7df415ffa80831bfeffffffffffffffffff7f600aaa800c0aff6fff0000000000000000003f80000000000000000000000000000000000000000000000000000000000003fef000000000000000000000000000000000000000000c00000000b00000000efefe7ff80000000000000000000000000000000000103f00000000aa08800037bfde7fb08003ffffffffffc000000000000000000048bf00000000500bfa18fdfbfbe71cefffffffff801ffff00000000000000030bea000000000f881fdbfab3fdbff03ffffffffffffffffffc000000601555affffaf0000000005a69435d41181013ffffffffffffffffffffc000017bdfc0028000000000000ffdaa2fffd0222b8fcffffffffffffffffff3ff8911000205fff6ffd0000000000000000007fc0000000000000000000000000000000000000000000000000000000000007ff7000000000000000000000000000000000000000001000000000080000000efeffffff0000000000000000000000000000000000107c00000000fd50400077dfdf3ff88007ffffffffffe0000000000000000000817f00000000f502f5069dfffdf908dfffffffffc00ffff800000000000001c15ed000000000fd80bb7fd5bfedff03ffffffffffffffffffe0000008088bfaffaa92000000000acd095fa8208a40fffffffffffffffffffffe00022bbdea0140002000000000ffd7017ffea403f27c7fffffffd9fffffffe3fd8c00000c0bbff9baa000000000000000000ccc00000000000000000000000000000000000000000000000000000000000079ff000000000000000000000000000000000000000006000000000060000000dff7fffffc00000000000000000000000000000000020bb00000000faa830007bdfefcff4001ffffffffffff8000000000000000000897f00000000ff55fa2086fffdff0cbfffffffffe00ffffc0000000000007c02beaa00000000fec15ebd6a9ff6ff07fffffffffffffffffff0000010411ffdfd51050000000081c680bff4146030fffffffffffffffffffffe8000171dd40a00015400000000ff9a84fff502a3e2fc7fffffff99fffffffe3f9dc0000e017bff9555000000000000000000aae00000000000000000000000000000000000000000000000000000000000076390000000000000000000000000000000000000000081000000000180000007ff7fffffe0000007ffe00000000000000000000000207700000000ff750c007bdfefe2e8003ffffffffffffc00000000000000000114ff00000000fffaff5458fffeff047ffffffffff81ffffe00000000001f8015fff500000000fec42b2a1d1ff9ff0ffffffffffffffffffff0000020aabffdaa80000000000002cf415ffa0b0006fffffffffffffffffffffe8004acdea810002aaa00000000ff95497ffe825184fc7fffffff99fffffffe3fafc000602bf7ebaaa0000000003b0a82bbfd452548f87fffffff99fffffffe1fcbc003005ff555450000000000aa801d15409ec701f901ffffffc7ffffff811f84700a7f22602c15ff00000000fa805f48afa98ca17f00feffffc3ffff41003e0423af0a8be2285ff700000000aa81144285550ba0d7c083fe048600c38103f008100bc2fffffe0fff00000000000545200000343afebe00bffffffffe007df002e880baff5f80097f00000000000487ff60a0218ebfff9fc000000003f87ffee1aa2ea507d2ff51510000000005417d0a13457380afffa294000008842fff50003483a34b50bfc85e000000005ffc02fe2bf8002ffffc79c83ec191c33f9caa1a8642e86c82ff517700000000901501fbfa0951d1f89fffffff93fffffffa1fb3815802bfa2aa800700000000f555282aa95c0b89f900ffffffe7ffffff009f84f057f2c5b0142bff00000000d520be855df496453f00beffffc3ffffc1207e2032970785d050bfef000000005100a8a140a8154187c020f8095a803e0003e0000825e15fffff0fff000000000002a2000500d035ffdf007ffffffffd00fbf90968f011be8ff804bf000000000008017c83550997ffff47f00000000fe0bffa5f42175687917e90b2000000002aa8f855450a99a77fff4029149441311558f001e985d29f917fa8be000000002ff8a97c5ffe051ff3f1e6c70199aa9da0394040394170a905ff90fb00000000402a8afbfd46a1c9f89fffffff83fffffffa1f83a48015f55010029000000000eaa05c1402ba0fc0f900ffffffe7ffffff009f06e02fc18bb08c55ff00000000ea805f48bfa880003f009c3fff81fffcc1107c0831af0bc2ffe55fef0000000088001152a800ae032be0400126f550800307c0208413e0aaaaff17ff00000000000144082faa0072ffef80a5ffffffe801f7fd02d8df833f4bd7825700000000000000ab15fe81abffffa3bc0000003fc47ff62a860fa50750ff515900000000555450afb015f15cffffa200210aa88a8283f0ff5083ab1b50bfc97f000000001ff154a8bfff0e2fc7f7811fe998ff3c97f3abe69282f9ea0aff107b0000000000050173fa1a4b91f88fffffff83fffffff21fbb8200aaaa0000500000000000fd542e0085f493c8f9007fffffe7fffffe009f01d09f8497b0182fff0000000054003e945bd229143f00c01fff81fff8c3007c40611f85a10024bfdf00000000550280a95c015c475be010008bff8a502507c0414425f55555558bff0000000000028200ffd01265ff77c053ffffff5403e7fc019c757e1e8dea612b00000000000150162ffa8197ffffd0ff800001ff00fffa0527075607917f90b8000000002fea215ff80ae2bffabb497000502009503ce02d8385d2b3a17fa8bf000000000fc2fe015fff9197cfeb7c8ffb00fe715ffb47926681f35455fea2fb00000000a80812b7f40d0289f88fffffffc3fffffff11f83b045400003d6800100000000faa85f100ab8fca0f9003fffffe7fffffc009f03f02f8b0bb22857fe00000000aa817d0a3faa44a41f00c007ff00ffe08320fc41010f83e82ab15fdf00000000a0014154afd5fa8ebdf00a0b6ffff5aa960f8000a20af088aaaa17ff00000000000448055ea1446babdbf009fffdbfa00fcffc1294ba951f53fd3f1700000000000aaa08bffd112bffffa63ffe007ffc117ff600070ba507c8bfc05d000000005ffd02fff015f22bcd4442e2000000023bf3f0500682eb3720bfc87f000000000715ff00bfff27cf5fe6fe9afb007ee72ffe07d3190bf22cabff257d000000004000286768325701f887ffffffc3ffffffe11f89d0002003fc3d000a00000000fd002e8055f4f2e4fd001fffffe7fffff800bf03cb5f8517d058affd0000000055003a045ff494711f80e001fe007f888740faa08007c5f55774bc0f00000000040082e8157fd42e7ef00555dffffffd591f4005a211e80005154bff00000000000200101505d0d557f1f816bdfe55001faffe05b4555a0f91faa08b000000000015ff417ff40315ffffd387ffffffe220ffec000b17568ba97fa8bc000000002ffa85ffc102e0c5ffaa8965550002a44fcff8001d41d3f6a17fa81e00000000402bffc14fff4fd7bc7eff417d000cdf6fdd73eacb57f8e155dea2fd00000000aa00154bd44e8e51f883ffffffc3ffffffc11f8941000e18400a005500000000faa05f40aff9c4207d002fffffe7fffff000bf053f2f0b0bd0285ffb00000000aa40744a2d5164a80f80e000bc003c180fa1f950004bcbfefbfa50f1000000009001413502aaa85cdf7806bfffffffffe03ee080d104ef800000a5f8000000000004016aa002e8cebffe7c0168d4a8003e1ffe2b6c3aac0f52ff204500000000000bffa0bfe8530affffe050ffffff0105ff54c00c8ba70b48bfc85c000000005ffd0aff8aa153f287fd60422aac89d0fc3fe001e840ebb542bfc96d000000002055ff9097fe5fcfa001ff480e01f1ffdaf6cde8e7afe898abbd257d0000000075502a8ea2270f01f903ffffffc7ffffffc11f88e01539e1611602af00000000f550bf8157f54c027d0037ffffe7ffffe010be060f9f1717e018bff700000000550038a51bea41706f80f000000000001f41f0202007c57ffffa03fe000000000002a28880d54219757c03ffffffffff403ef08151015fffe00012f700000000000022ff900094d77fff3f00152a0000fc2ffe1ed41f4a0f917ea0e2000000000283fe805fa08b015fffd6281fffe0750bfeac001887568ba87fe8be000000003ffe05ff1550a75c71ff9b84570354e67fe7170f53417336817f92f300000000502bff042afe9fa600803fe6b083fdbe11f8f2f69f7fd1e55bea22fe000000002c15fe0b057cb8020c1007ebf67ffd41ff00f91cedbea2c4bbd545fe0000000005ffc5502b8af0eaa8aacc22bec03fdff2ffaafa0d665967fe6215fc000000007ff102ffc280aabeb2ffff2ffa0007ffffff7ff9acafe73fa3c7fe1e000000000015ffd02bffffff82ffff80354e13ffffeaf0ffffffafff07c00ac5000000007055ff45ffffc4090affff4bd80c7fffbffaf67ffffbf77ffeff18bf00000000055415455fff53fe2a800a31800007ffdffffff8378eefdf7f3f7ffc0000000017abff855502affa3ffffffaf3e04ffffbebebff0ffbdfdfffe400550000000055eaac057ff550082ffeec00078fefffff3ffffffe047ff00d7dbfea000000007c02fc57c0a8e00073c029e7fce4bc3ffef8fd01ed7e010237234afe0000000022ff8aaa1515fffd595ffe0455801fffffdfd7d55446dd73fd942bfc000000007ff2a0bf45f00555617ffe1ffc000ffffffdfffb7bdfeadf8071f09400000000282bffe014bfffff45ffff850001bfcbfe90f0fffff75fff07e0178900000000602affabffffa80295ffffe7b01e3ffffff5ef3ffffbbfffbeff615f000000004aaa0a82afffc5fd15500121800007ffffffffff8b5fcfdf7f3ffff8000000002fc4ff82aaa05ffc5fffffe00e7fbffff5fffffe7ff79feeffe00aab000000002a800002fffeaa0015d5580007c7efffff5ffffce82a3feadfdbffd50000000038417c2ff012c6a18038046ffffb5ffff57f0ebf7afdf815755645fe00000000617e15fd8f2bfffeb8bffc1003018dfffffffcea80135cbbf3c817fa000000003fe1545e8bfe002ae2ffff2fff800ff7ffeafc02ff9fdddfd410022c000000007617ffd0415fffff8beffd9256eaffff8020f0ffffff7fff03f81d12000000005015ff45fffffd000bffffeb601f1fffffffffdffffbf7bffefe0abf000000000555410057ffebfe2faac012800007ffffffffffc79defdf7f1ffff00000000017a1ff8555502ffa3fffff9c03ffbffffbfffff8fff79feeffe0455500000000100000013fff75402aa8580003c6a7ffffbffff852d5bfef77fffeaf00000000709038bffc002cfe2546030fff7fabffabfee1bfffebfe2ae6988afe0000000072bd0bff6415ffff517ffe42ab03cabfffffe0ff1f223e39fe10abfa000000005fa2aa2f17ffe000015dde1fffd41fffffc0f8e57f5fdfefc284165c000000007a2bffe28025ffffc5d5fe812fedfffa0400f0ffffdfbfff03fcba2500000000600aff8bff2fffa8057fffe4e00f0fffffffffdffff777bfbf7e15ff000000000afba000057fffff1fffa802800007ffeffffffae73dcfdf7f1fff40000000002fc2ff8aaaa815dc5ffffe7000ffbffffffffff0ffef3feeffe02abf0000000000000002ffffbaa800555800018347ffffdfffe0bfff8fefff27fd7f00000000717a014fffe02c8604a1c13ffefff5ffffd5fc3f5fa3ff17ce6485fe00000000784a57ffd02affffb2fffc257601876fffff00fe7f97bf6c1f4157f2000000003f4555052fffff80002aab2fffefffffff20f8f9ffbfdfefe45570f0000000007c57ffc1500a57ff8bc0fdd2bff5ffd51008f8ffffbf7fff03fe684b0000000040055f45ff07fffa02bfffe2c0060fffffffff0ffef777bfbf7c4bff0000000017ffd80002affffe2ffffd0900000fffdfffffa4b53defdf7f1fee00000000005f95ff857f540ab23ffffdc0007fdffffefffff0ffe8bfeeffe455fe000000000046c000bffffde515003000000237ffffefffc0efffe1cc036fffff0000000062bf40b5ffe119000554305fff7ffeffffa0fffebc173bbf1f9ea2fe000000007c242bffe055ffff517ffe53f60007fefb5eb2feff867f9ec280afe6000000004a8afe8a17ffffff00000257ffd7fffbd440f8fe7fbfdfefe0ebd8e20000000074abffeaa200aaff47f1fec5fc07ffeabaa4f8fffdffffff01fe3095000000006382aeaaff89fffd0055ffb5c00007ffdffff88ffed7efbfbf7817ff000000002bfff5000057fffd1fffffa580000ffdefffff50e27dcfdf7f1fa002000000002fefff82bfaa85505ffffb80063fdfffff7ffff0ffc07fedffc2afdf0000000000a8800057fffffa2aaab0000003fffffff7fe08dffe9c0085bfffff0000000045ffa00abfc29a2088028cbffe41ffbf7c00fffff12618ccbd3915fe000000007f0857ffd02abfffb2fffe2ff60007fd74fffffcbc0ffffe54057fce000000001505ff442fffffffe0000017ffedffffe8aff0ff9e7feffffc3d42b0000000007857ffc55d60052f0beaff4bf381ffff5759f8fffbffffff01ff030b0000000007405f45fff4fffe000abfb1c00007ffbfffb40ffda6efbfbfb0bffe0000000017ffff81400afffe2ffffffae0001abfbffebfe7c8fbcfdf7f0fa001000000005fffff857ff542aa2ffff6000f1fdfffff7ffff0ffc07fedff1576fe0000000006e8cc000b6ffffd17ddb0000003f7ffffefe015fff540495fffffff000000004affc2815dc54a5558100057ff307ffead25ebff42d618e965810bfc000000007fc009ffe0055fff71ffff17f60007ffffffe8fd736fffff5d2fff9e00000000020bffa057ffffffc15550095ffbfffffffdf0ffe1ffeffff70805e40000000068abff82ffd5005695fffed5ec00fffffe7ffcffaffff7ff01ff045f0000000042a02e82fffdfffd14015755800007ffdfff23c3f3cecfbfbfa2fffe000000002fffff82a0055ffc5ffffffc3c0024766bf557ff93fb9fdf7f0f00aa000000002ffffac2ffeaa0545fffec000f8feffffebffff8ff807fe8f02bfffd0000000000a6e0000015fffe0fffb0000003f7fffffb116effe00aa2ffffffff0000070707070707474547070707070707070707070707070707070707070704070707070707070745454747070707070707070707070707070707070707040407070707040407074545474747470707444444070707070707070707070404440707070744440447454d7d7d7d474444444444444407070707070707070444440707070774744444454d7d7d6f44444444447c7c444407070707070404444474070707070444444444454d7d6c7444444444444444444407040404040444444407070707340404040445454504444444444444444444440404040404040404040707070734040404040404041444444444444444444454040404040404044444070707070404040404040404144c444444444444444c54040404040404040444070707070404040404040303140c444444444444540b54040304040404044454070707070404040404040404040c51544c4c4c44510a44040304040404044454070707070404040404040404040c0a0a0a0a0a0a0a4c4404040404040404445407070707040404060606060404040c0a0a0a0a0a0c44440404040404044404440707070706064606060606040404040c0c0c0c0c0444440404040404044444440707070746460606060606040404040606060606444444040404040404444444070707074646060606060504040405464647460544444505044444044444044407070707060606060606050505050546464646466666444444444544444404440707070706060606064646464646464646474646464666444545454544444444070707070606060606060606464646464646464666666c454d4d454545444404070707070606060606060606067e46464646466666666c7d7d7d45456f4704440707070706060606063e06064646464646474646464646457d4d4d7d4d474444070700000606060606063e06464646464646464646464666454d4d7d4d6c444400000000063e06060606060646464646464646464646466e4545457d4545444400000000060606060606060646464646474646464646666644444545444444440000";
+
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) out[i / 2] = parseInt(hex.substr(i, 2), 16);
+  return out;
+}
+
+const screenBytes = hexToBytes(SCREEN_HEX);
+const bitmap = screenBytes.subarray(0, 6144);
+const attrs = screenBytes.subarray(6144, 6144 + 768);
+
+// Paleta estandar ZX Spectrum (normal / brillante), indice 0-7
+const PALETTE = [
+  [0x00,0x00,0x00], [0x00,0x00,0xD7], [0xD7,0x00,0x00], [0xD7,0x00,0xD7],
+  [0x00,0xD7,0x00], [0x00,0xD7,0xD7], [0xD7,0xD7,0x00], [0xD7,0xD7,0xD7]
+];
+const PALETTE_BRIGHT = [
+  [0x00,0x00,0x00], [0x00,0x00,0xFF], [0xFF,0x00,0x00], [0xFF,0x00,0xFF],
+  [0x00,0xFF,0x00], [0x00,0xFF,0xFF], [0xFF,0xFF,0x00], [0xFF,0xFF,0xFF]
+];
+
+// Direccion clasica de pantalla ZX Spectrum: 3 tercios de 2048 bytes,
+// cada tercio con 8 filas de caracter (charRow) x 8 filas de pixel
+// dentro de la celda (pixelRow), en ESE orden (no lineal por fila Y).
+function bitmapByteOffset(y, xByte) {
+  const third = y >> 6;
+  const within = y & 63;
+  const charRow = within >> 3;
+  const pixelRow = within & 7;
+  return third*2048 + pixelRow*256 + charRow*32 + xByte;
+}
+
+let flashPhase = false;
+
+function render() {
+  const canvas = document.getElementById('cover');
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(256, 192);
+  for (let y = 0; y < 192; y++) {
+    const yChar = y >> 3;
+    for (let xByte = 0; xByte < 32; xByte++) {
+      const byteVal = bitmap[bitmapByteOffset(y, xByte)];
+      const attr = attrs[yChar*32 + xByte];
+      let ink = attr & 0x07;
+      let paper = (attr >> 3) & 0x07;
+      const bright = (attr & 0x40) !== 0;
+      const flash = (attr & 0x80) !== 0;
+      if (flash && flashPhase) { const t = ink; ink = paper; paper = t; }
+      const pal = bright ? PALETTE_BRIGHT : PALETTE;
+      const inkRGB = pal[ink], paperRGB = pal[paper];
+      for (let bit = 0; bit < 8; bit++) {
+        const on = (byteVal >> (7-bit)) & 1;
+        const rgb = on ? inkRGB : paperRGB;
+        const x = xByte*8 + bit;
+        const px = (y*256 + x) * 4;
+        img.data[px] = rgb[0];
+        img.data[px+1] = rgb[1];
+        img.data[px+2] = rgb[2];
+        img.data[px+3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+render();
+
+let flashTimer = null;
+document.getElementById('flashToggle').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    flashTimer = setInterval(() => { flashPhase = !flashPhase; render(); }, 312);
+  } else {
+    clearInterval(flashTimer);
+    flashPhase = false;
+    render();
+  }
+});
+</script>
+
+</body>
+</html>

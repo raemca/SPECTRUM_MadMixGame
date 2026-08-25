@@ -1,0 +1,23 @@
+; !!! AVISO -- LEE ESTO ANTES DE EDITAR !!!
+; Ingenieria inversa, herramientas y documentacion de este proyecto: Rafael Eduardo Martin Candial (raemca@hotmail.com)
+; Guion de sonido de 32_subpatron_A_df0d.spt -- 14 bytes.
+; Motor RESUELTO sesion 55 (ver ISR_SONIDO en madmix_body.asm). Puedes
+; cambiar el VALOR de una nota o el destino de un CALL; NO añadas ni
+; quites lineas -- el tamaño es FIJO, el motor lee estos bytes
+; directamente desde RAM en las direcciones originales.
+; bytes=14
+
+PATCH2
+NOTE 0x13
+RESET
+NOTE 0x13
+NOTE 0x13
+NOTE 0x15
+NOTE 0x12
+NOTE 0x13
+NOTE 0x15
+NOTE 0x17
+NOTE 0x18
+RESET
+RESET
+RETURN

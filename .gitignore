@@ -1,0 +1,17 @@
+# Material con copyright (volcado original y derivados) -- ver AVISO-LEGAL.md
+FISICO/
+build/
+
+# Binarios generados por la compilacion (py tools/build_all.py)
+src/build/
+
+# Config local de Claude Code (rutas absolutas especificas de la maquina)
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+
+# Windows
+Thumbs.db
+desktop.ini

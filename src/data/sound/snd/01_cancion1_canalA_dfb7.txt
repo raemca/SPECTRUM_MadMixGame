@@ -1,0 +1,16 @@
+; !!! AVISO -- LEE ESTO ANTES DE EDITAR !!!
+; Ingenieria inversa, herramientas y documentacion de este proyecto: Rafael Eduardo Martin Candial (raemca@hotmail.com)
+; Guion de sonido de 01_cancion1_canalA_dfb7.snd -- 19 bytes.
+; Motor RESUELTO sesion 55 (ver ISR_SONIDO en madmix_body.asm). Puedes
+; cambiar el VALOR de una nota o el destino de un CALL; NO añadas ni
+; quites lineas -- el tamaño es FIJO, el motor lee estos bytes
+; directamente desde RAM en las direcciones originales.
+; bytes=19
+
+CALL 0xDE4E
+CALL 0xDEAD
+CALL 0xDEAD
+CALL 0xDD18
+CALL 0xDF28
+CALL 0xDF9E
+END

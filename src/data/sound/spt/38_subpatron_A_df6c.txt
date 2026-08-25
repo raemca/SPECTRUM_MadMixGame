@@ -1,0 +1,23 @@
+; !!! AVISO -- LEE ESTO ANTES DE EDITAR !!!
+; Ingenieria inversa, herramientas y documentacion de este proyecto: Rafael Eduardo Martin Candial (raemca@hotmail.com)
+; Guion de sonido de 38_subpatron_A_df6c.spt -- 14 bytes.
+; Motor RESUELTO sesion 55 (ver ISR_SONIDO en madmix_body.asm). Puedes
+; cambiar el VALOR de una nota o el destino de un CALL; NO añadas ni
+; quites lineas -- el tamaño es FIJO, el motor lee estos bytes
+; directamente desde RAM en las direcciones originales.
+; bytes=14
+
+NOTE 0x0B
+NOTE 0x02
+NOTE 0x0C
+NOTE 0x0E
+NOTE 0x10
+NOTE 0x0C
+PATCH1
+NOTE 0x0E
+NOTE 0x10
+NOTE 0x11
+NOTE 0x10
+NOTE 0x11
+NOTE 0x12
+RETURN

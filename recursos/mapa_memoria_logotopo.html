@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<!-- Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com) -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mad Mix Game (Spectrum) — mapa de memoria de la portada/logo</title>
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --fg: #2a2621;
+    --panel: #ffffff;
+    --border: #ddd6cc;
+    --muted: #7a7266;
+    --c-codigo: #6a86ae;
+    --c-mecanico: #b0a06a;
+    --c-graficos: #7fae6a;
+    --c-tabla: #8a6ab0;
+    --c-sinexplorar: #cbc3b6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1a17;
+      --fg: #ece6da;
+      --panel: #262320;
+      --border: #3a352e;
+      --muted: #a39a8a;
+      --c-codigo: #7f9bc4;
+      --c-mecanico: #d0be82;
+      --c-graficos: #8fc27a;
+      --c-tabla: #a17fd0;
+      --c-sinexplorar: #4a453c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem clamp(1rem, 4vw, 3rem);
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+  h2 { font-size: 1.15rem; margin: 2.5rem 0 0.6rem 0; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  .subtitle { color: var(--muted); margin-top: 0; }
+  .note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--c-tabla);
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin: 1rem 0 2rem 0;
+    font-size: 0.92rem;
+  }
+  .note code { font-family: "SFMono-Regular", Consolas, monospace; }
+  code { font-family: "SFMono-Regular", Consolas, monospace; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.4rem;
+    margin: 0.6rem 0 1.6rem 0;
+    font-size: 0.85rem;
+  }
+  .legend span.swatch {
+    display: inline-block;
+    width: 0.8em;
+    height: 0.8em;
+    border-radius: 3px;
+    margin-right: 0.4em;
+    vertical-align: middle;
+  }
+
+  .mem-outer { position: relative; margin-top: 1.5rem; }
+  .mem-bar {
+    position: relative;
+    height: 64px;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--c-sinexplorar);
+  }
+  .mem-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-right: 1px solid rgba(0,0,0,0.15);
+    overflow: hidden;
+    cursor: default;
+  }
+  .mem-seg-label {
+    position: absolute;
+    top: 0; bottom: 0; left: 2px; right: 2px;
+    display: flex;
+    align-items: center;
+    font-size: 0.62rem;
+    color: #14110d;
+    overflow: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+  }
+  .mem-ticks { position: relative; height: 22px; margin-top: 2px; }
+  .tick { position: absolute; top: 0; width: 1px; height: 6px; background: var(--muted); }
+  .tick-label {
+    position: absolute;
+    top: 8px;
+    font-size: 0.68rem;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    color: var(--muted);
+    white-space: nowrap;
+    transform: translateX(-2px);
+  }
+
+  .detail-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+  .detail-table th, .detail-table td { text-align: left; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .detail-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.02em; }
+  .detail-table td.addr { font-family: "SFMono-Regular", Consolas, monospace; white-space: nowrap; color: var(--muted); }
+  .detail-table td.cat { white-space: nowrap; }
+  .detail-table tr:hover td { background: var(--panel); }
+  .row-swatch { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 3px; margin-right: 0.4em; vertical-align: middle; }
+
+  footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+
+<h1>Mad Mix Game (ZX Spectrum) — mapa de memoria de la portada/logo</h1>
+<p class="attribution-line" style="color:var(--muted);font-size:0.85rem;margin:-0.3rem 0 1.2rem 0;">Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com)</p>
+<p class="subtitle">Misma plantilla que <code>mapa_memoria.html</code>, pero con escala propia acotada al rango del código de portada/logo (<code>$EA60-$FADD</code>, 4222 bytes) — igual que <code>mapa_memoria_logotopo.html</code> en el proyecto hermano de MSX para <code>LOGOTOPO.CM</code>.</p>
+
+<div class="note">
+  Esta es exactamente la misma situación que en MSX: el logo animado
+  de Topo Soft se dibuja usando memoria que <strong>más tarde
+  reutiliza el motor del juego</strong>. <code>$EA60-$FADD</code> cae
+  DENTRO del rango que ocupará <code>CODE.bin</code>
+  (<code>$6000-$EFB5</code>) una vez lo cargue <code>LOADER.bin</code>
+  — para cuando eso pasa, la animación del logo ya terminó y devolvió
+  el control a BASIC (ver <code>src/FINDINGS.md</code>, sesiones 2 y 4:
+  cadena de arranque completa y confirmación visual del usuario). Ver
+  <code>mapa_memoria.html</code> para el mapa completo de las 5
+  direcciones de la RAM.
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:var(--c-codigo)"></span>código con análisis semántico</span>
+  <span><span class="swatch" style="background:var(--c-tabla)"></span>tabla de datos identificada (punteros, guiones, filas de pantalla)</span>
+  <span><span class="swatch" style="background:var(--c-graficos)"></span>gráficos del logo (INCBIN, confirmados visualmente)</span>
+  <span><span class="swatch" style="background:var(--c-mecanico)"></span>reconstrucción mecánica sin analizar todavía</span>
+  <span><span class="swatch" style="background:var(--c-sinexplorar)"></span>relleno/patrón repetido sin identificar</span>
+</div>
+
+<div class="mem-outer">
+  <div class="mem-bar" id="mem-bar"></div>
+  <div class="mem-ticks" id="mem-ticks"></div>
+</div>
+
+<table class="detail-table" id="mem-table">
+  <thead><tr><th>Rango</th><th>Tamaño</th><th>Categoría</th><th>Descripción</th></tr></thead>
+  <tbody id="mem-table-body"></tbody>
+</table>
+
+<footer>
+  Generado a partir de <code>src/portada_body.asm</code> y
+  <code>src/FINDINGS.md</code>. <strong>Bloque cerrado</strong> (sesión
+  21): no queda ningún tramo "mecánico" ni "sin identificar" — todo
+  <code>$EA60-$FADD</code> está clasificado como código analizado,
+  tabla con nombre, gráfico confirmado, o huérfano documentado como
+  tal. El siguiente bloque grande pendiente es <code>madmix_body.asm</code>
+  (el motor del juego, 36790 bytes) -- ver <code>mapa_memoria.html</code>.
+</footer>
+
+<script>
+// ============================================================
+// SEGMENTOS -- rango propio $EA60-$FADE (el payload de portada tal
+// cual se ejecuta, ya reubicado). Ir ampliando/corrigiendo segun se
+// analicen los tramos mecanicos restantes.
+// ============================================================
+const RANGE_START = 0xEA60;
+const RANGE_END = 0xFADE;
+
+const SEGMENTS = [
+  { start: 0xEA60, end: 0xEA82, label: "ANIMAR_PUNTO_LUZ_SOFT", detail: "34 bytes. Anima 8 columnas de atributos de color (rojo/blanco brillante) en 2 filas de la pantalla -- ver FINDINGS.md sesion 4/5. RENOMBRADA (sesion 11) con el nombre EXACTO de su equivalente ya resuelto en el LOGOTOPO.CM de MSX (confirmado visualmente alli como 'un punto de luz que recorre Soft') -- coincide en posicion (justo donde DIBUJAR_SOFT_ROTANDO dibuja \"SOFT\") y en orden (tras las 3 rotaciones de SOFT, antes de la estrella) en ambas versiones. Ver src/README.md, seccion de convenciones, para la estrategia de nombres compartidos MSX/Spectrum.", category: "codigo" },
+  { start: 0xEA82, end: 0xEAD3, label: "DIBUJAR_FORMA_ANIMADA", detail: "81 bytes. Copia una forma de 27 filas x 3 bytes (24x27 pixeles) a la posicion de pantalla indicada por 4 parametros autoemodificados (\$EA8E=forma, \$EA83=fila, \$EAB6=columna, \$EAC0=opcode de combinado). CONFIRMADO (sesion 6): sus dimensiones fijas (27x3) y sus valores compilados por defecto (14,110,22) coinciden EXACTO con la estrella (DIBUJAR_ESTRELLA_ANIMADA) -- es la rutina de dibujo de bajo nivel de las 6 secuencias de animacion (SOFT, T, P, O1, O2, estrella). RESUELTO (sesion 18, comparando con MSX): \$EAC0 es el opcode de la instruccion justo tras 'LD A,(DE)' en su bucle de copia -- normalmente NOP (copia directa), pero DIBUJAR_O1_TOPO lo cambia a \$B6 = OR (HL) para mezclar (en vez de sobreescribir) con lo que ya haya en pantalla. Mismo mecanismo EXACTO que \$94F3 en logotopo_cm_body.asm de MSX, activado alli tambien solo para O1_TOPO. INVESTIGADO Y CERRADO (sesion 19): la ventana de 27x3 es fija siempre, ignorando la cabecera de cada forma (\$EABE/\$EAB3, cuyo producto coincide con el tamano real del fichero) -- renderizar los bytes crudos con ese ancho 'real' sugeria un posible glitch (curvas cortadas en diagonal con la ventana fija), pero el usuario (testigo directo del juego original) CONFIRMO que T-O-P-O aparecen limpias, una a una, sin parpadeo ni distorsion -- descarta el glitch. Conclusion: 27x3 (una letra gruesa compacta) es el tamano real y correcto de dibujo; las cabeceras no describen el ancho usado para dibujar (de hecho \$EABE es codigo muerto, sesion 17).", category: "codigo" },
+  { start: 0xEAD3, end: 0xEB17, label: "RESTAURAR_FRANJA_FONDO", detail: "68 bytes. RESUELTA (sesion 10): llamada justo despues de cada DIBUJAR_FORMA_ANIMADA en las secuencias de movimiento (DIBUJAR_O1_TOPO/O2) -- copia franjas de 6 bytes desde el buffer de pantalla guardado por GUARDAR_PANTALLA_LOGO (\$C738) de vuelta a la pantalla real, usando RESTAURAR_FRANJA_FILA. Es el mecanismo clasico de 'guarda el fondo antes de mover el sprite, restauralo cada fotograma' para borrar el rastro de la forma en su posicion anterior. RESUELTO (sesion 17): el calculo interno indexado por \$EABE contra LDI_EXTRA_HUERFANOS (\$EB10) es CODIGO MUERTO confirmado -- nunca se lee: hipotesis de que es resto de una version anterior con ancho de franja variable segun la forma.", category: "codigo" },
+  { start: 0xEB17, end: 0xEB38, label: "DIBUJAR_SOFT_ROTANDO", detail: "33 bytes. Fija fila=120, columna=15 (posicion FIJA) y recorre TABLA_ANIMACION_SOFT (0..6..0) escribiendo cada indice en \$EA8E y llamando a DIBUJAR_FORMA_TEMPORIZADA -- \"SOFT\" rotando en su sitio. Llamada 3 veces desde DIBUJAR_LOGO_TOPOSOFT.", category: "codigo" },
+  { start: 0xEB38, end: 0xEB53, label: "DIBUJAR_T_TOPO", detail: "27 bytes. Fija forma=7 (LOGO_T), fila=50 (fija), y anima columna 0,1,2 llamando a DIBUJAR_FORMA_TEMPORIZADA -- la T se asienta en su sitio con un pequeno ajuste de 3 columnas.", category: "codigo" },
+  { start: 0xEB53, end: 0xEB6D, label: "DIBUJAR_P_TOPO_ANIMADA", detail: "26 bytes. Fija forma=9 (LOGO_P), fila=62 (fija), y desliza columna de 26 a 10 llamando a DIBUJAR_FORMA_TEMPORIZADA -- la P entra deslizando horizontalmente.", category: "codigo" },
+  { start: 0xEB6D, end: 0xEB95, label: "DIBUJAR_O1_TOPO", detail: "40 bytes. Fija forma=8 (LOGO_O1, la primera O), y cae en linea recta de fila 6 a fila 62 (pasos de 8), llamando DIBUJAR_FORMA_ANIMADA + RESTAURAR_FRANJA_FONDO en cada posicion. Termina con un redibujado final de asentamiento (.FIN_LOGO_O1).", category: "codigo" },
+  { start: 0xEB95, end: 0xEBB9, label: "DIBUJAR_O2_TOPO_ANIMADA", detail: "36 bytes. Fija forma=10 (LOGO_O2, la segunda O), y sigue el guion TABLA_TRAZO_O2_TOPO (fila 62->22->62, columna subiendo despacio) llamando DIBUJAR_FORMA_ANIMADA + RESTAURAR_FRANJA_FONDO en cada paso -- la segunda O entra con un rebote/curva.", category: "codigo" },
+  { start: 0xEBB9, end: 0xEBD8, label: "DIBUJAR_ESTRELLA_ANIMADA", detail: "31 bytes. Cicla \$EA8E directamente por los indices 11-14 leyendo TABLA_ANIMACION_ESTRELLA, con posicion FIJA (fila 110, columna 22 -- los mismos valores por defecto de DIBUJAR_FORMA_ANIMADA) -- la estrella parpadea en su sitio, no se mueve.", category: "codigo" },
+  { start: 0xEBD8, end: 0xEC29, label: "DIBUJAR_LOGO_TOPOSOFT", detail: "81 bytes. RESUELTA POR COMPLETO (sesion 10): el punto de entrada REAL de toda la portada (destino del JP del stub). Orquesta en orden: LIMPIAR_TABLA_COLOR_VRAM, DIBUJAR_T_TOPO, DIBUJAR_P_TOPO_ANIMADA, GUARDAR_PANTALLA_LOGO, DIBUJAR_O1_TOPO, GUARDAR_PANTALLA_LOGO, DIBUJAR_O2_TOPO_ANIMADA, PORTADA_EC66 (decoracion), RELLENAR_COLOR_TOPO, DIBUJAR_SOFT_ROTANDO x3, ANIMAR_PUNTO_LUZ_SOFT, DIBUJAR_ESTRELLA_ANIMADA, y RET (fin de la portada, vuelve a BASIC).", category: "codigo" },
+  { start: 0xEC29, end: 0xEC4D, label: "LIMPIAR_TABLA_COLOR_VRAM", detail: "36 bytes. RESUELTA (sesion 10): borra la pantalla completa -- rellena las 768 celdas de atributos con \$47 (tinta blanca brillante/papel negro) y los 6144 bytes de bitmap con 0, usando el truco de 1 escritura + LDIR. Primer paso de la secuencia maestra.", category: "codigo" },
+  { start: 0xEC4D, end: 0xEC66, label: "RELLENAR_COLOR_TOPO", detail: "25 bytes. RESUELTA (sesion 10): rutina generica parametrizada (autoemodificada via \$EC4E=filas, \$EC50=celda inicial, \$EC5A=color) que rellena N filas de 8 celdas de atributo con un color, bajando 32 (una fila) cada vez. La usan DIBUJAR_LOGO_TOPOSOFT (antes de ANIMAR_PUNTO_LUZ_SOFT) y PORTADA_EC66.", category: "codigo" },
+  { start: 0xEC66, end: 0xECB7, label: "ANIMAR_COLOR_TOPO", detail: "81 bytes. Llama a RELLENAR_COLOR_TOPO dos veces por vuelta (colores cian/verde, 5/7 filas) en 2 posiciones que van decrementando (deslizando a la izquierda), 9 vueltas con pausas, y RET. RENOMBRADA (sesion 10): coincide en POSICION dentro de la secuencia (justo tras dibujar las 4 letras) con ANIMAR_COLOR_TOPO del LOGOTOPO.CM de MSX -- alli, ya resuelta y CONFIRMADA VISUALMENTE, es \"el color de TOPO expandiendose desde el centro hacia los lados\". Mecanismo Z80 distinto (aqui 2 bloques deslizando, en MSX 2 cajas VRAM separandose) pero mismo efecto en el mismo punto -- semantica visual exacta en Spectrum aun sin confirmar en emulador.", category: "codigo" },
+  { start: 0xECB7, end: 0xECDA, label: "RUIDO_ALTAVOZ_HUERFANO", detail: "35 bytes. ANALIZADO (sesion 14) pero INALCANZABLE: ningun CALL/JP en los 5 binarios reconstruidos apunta aqui -- el RET de ANIMAR_COLOR_TOPO justo antes corta cualquier flujo normal hacia este tramo, y no hay tabla ni salto indirecto que lo referencie. Bytes reales verificados (0 diferencias), pero huerfanos -- mismo termino que DATOS_HUERFANOS_9EEA en TABLA_FORMAS de MSX. Si se llamara: hasta 50 pulsos de sonido por el altavoz (bit 4 puerto \$FE) usando el registro R como contador Y como condicion de salida aleatoria (RET M corta el bucle entero con ~50% de probabilidad en cada comprobacion) -- un efecto tipo chisporroteo/estatica de duracion variable. Cae sin RET propio directamente en PAUSA_ENTRE_LETRAS. Probable llamada retirada durante el desarrollo original de 1988, con el codigo dejado en su sitio para no desplazar direcciones.", category: "codigo" },
+  { start: 0xECDA, end: 0xECE0, label: "PAUSA_ENTRE_LETRAS", detail: "6 bytes: LD BC,5 / JP \$1F3D. RESUELTO (sesion 14): \$1F3D es PAUSE-1, la segunda instruccion del comando BASIC PAUSE de la ROM de 48K (HALT / DEC BC / comprueba fin o tecla pulsada) -- entra 3 bytes despues del punto de entrada normal (\$1F3A), saltandose el FIND-INT2 que leeria el parametro de BASIC, porque aqui BC ya viene cargado a mano. Pausa 5 interrupciones (~0.1s a 50Hz), interrumpible si el jugador pulsa una tecla (la ROM comprueba el bit 5 de FLAGS en cada HALT). Llamada 4 veces desde DIBUJAR_LOGO_TOPOSOFT, siempre justo despues de dibujar una letra de TOPO (T, P, O1, O2). Sin equivalente directo en MSX (alli cada rutina de letra trae su propio bucle local HALT/DJNZ inline) -- nombre propio en espanol.", category: "codigo" },
+  { start: 0xECE0, end: 0xECE5, label: "DIBUJAR_FORMA_TEMPORIZADA", detail: "5 bytes: EI / HALT / JP DIBUJAR_FORMA_ANIMADA -- \"espera 1 frame y dibuja la forma actual\". La usan DIBUJAR_SOFT_ROTANDO/T/P y DIBUJAR_ESTRELLA_ANIMADA (las secuencias de posicion fija o casi fija).", category: "codigo" },
+  { start: 0xECE5, end: 0xECF1, label: "GUARDAR_PANTALLA_LOGO", detail: "12 bytes. RESUELTA (sesion 10): LD HL,\$4000/DE,\$C738/BC,\$1B00/LDIR -- copia la pantalla completa (6912 bytes) a un buffer en \$C738. Se llama antes de DIBUJAR_O1_TOPO y DIBUJAR_O2_TOPO_ANIMADA -- el buffer es lo que luego lee RESTAURAR_FRANJA_FONDO (direccion_pantalla+\$8738 = direccion_pantalla-\$4000+\$C738, la MISMA celda dentro del buffer).", category: "codigo" },
+  { start: 0xECF1, end: 0xED0F, label: "TABLA_PUNTEROS_FORMAS", detail: "30 bytes = 15 entradas de 2 bytes. Indexada por \$EA8E*2 en DIBUJAR_FORMA_ANIMADA -- cada entrada es un desplazamiento desde TABLA_FORMAS (\$EF1C, alias de LOGO_SOFT_1) hasta el inicio real de cada una de las 15 formas del logo (ver mas abajo). CONFIRMADA (sesion 8): extraida a tabla DW nativa con aritmetica de etiquetas (DW LOGO_T-TABLA_FORMAS, etc.) en src/portada_body.asm -- 0 diferencias al recompilar. RENOMBRADA (sesion 13) con el nombre EXACTO de su equivalente en logotopo_cm_body.asm de MSX (TABLA_PUNTEROS_FORMAS alli tambien), extendiendo la politica de nombres compartidos de sesion 11 a las tablas de datos.", category: "tabla" },
+  { start: 0xED0F, end: 0xED29, label: "TABLA_ANIMACION_SOFT", detail: "26 bytes: 1,1,2,2,3,3,4,4,5,5,6,6,5,5,4,4,3,3,2,2,1,1,0,0,\$FF + 1 byte suelto sin identificar (\$ED28, justo antes de la siguiente tabla). Consumida por DIBUJAR_SOFT_ROTANDO escribiendo cada valor en \$EA8E -- CONFIRMADA: cuenta 0..6..0, exactamente los 7 fotogramas de \"SOFT\" rotando ida y vuelta (sesion 5). Extraida a DB nativo con etiqueta (sesion 8). RENOMBRADA (sesion 13) con el nombre EXACTO de su equivalente en MSX.", category: "tabla" },
+  { start: 0xED29, end: 0xED48, label: "TABLA_TRAZO_O2_TOPO", detail: "31 bytes: 15 pares (columna,fila) + \$FF. Consumido por DIBUJAR_O2_TOPO_ANIMADA -- fila baja de 62 a 22 y vuelve a subir a 62, columna sube despacio -- CONFIRMADO como guion de movimiento curvo/rebote (sesion 5). Extraida a DB nativo con etiqueta (sesion 8). RENOMBRADA (sesion 13) con el nombre EXACTO de su equivalente en MSX.", category: "tabla" },
+  { start: 0xED48, end: 0xED51, label: "TABLA_ANIMACION_ESTRELLA", detail: "9 bytes: \$0B,\$0C,\$0D,\$0C,\$0B,\$0C,\$0D,\$0E,\$FF. Consumido por DIBUJAR_ESTRELLA_ANIMADA -- CONFIRMADO como el guion que cicla los 4 fotogramas de la estrella (sesion 5). Extraida a DB nativo con etiqueta (sesion 8). RENOMBRADA (sesion 13) con el nombre EXACTO de su equivalente en MSX.", category: "tabla" },
+  { start: 0xED51, end: 0xED85, label: "LDI_EXTRA_HUERFANOS", detail: "52 bytes = 26 LDI consecutivos, sin RET propio (caerian directo en RESTAURAR_FRANJA_FILA si se ejecutaran). RESUELTO (sesion 17, antes 'relleno/sin identificar' sesion 7): INALCANZABLE -- ningun CALL/JP apunta aqui (mismo caso que RUIDO_ALTAVOZ_HUERFANO, sesion 15), aunque su DIRECCION si se referencia en un calculo muerto dentro de RESTAURAR_FRANJA_FONDO (\$EB10, indexado por la cabecera de forma \$EABE, escrito pero nunca leido). HIPOTESIS: los 26 LDI 'de mas' de una version anterior y mas ancha de RESTAURAR_FRANJA_FILA (32 LDI = franja de 32 bytes) reducida despues a solo 6 LDI (franja de 6 bytes), sin borrar el resto -- encajaria con que el calculo muerto de \$EB10 apunta precisamente dentro de este bloque, y con que \$ED,\$A0 es el opcode real de LDI, no un patron de relleno tipico.", category: "codigo" },
+  { start: 0xED85, end: 0xED92, label: "RESTAURAR_FRANJA_FILA", detail: "13 bytes. RESUELTA (sesion 10, mnemonicos reales sesion 16): 6 LDI seguidos de un RET (HL=origen en el buffer de fondo guardado via +\$8738, DE=destino en pantalla real). La llama RESTAURAR_FRANJA_FONDO una vez por fila. RENOMBRADA (sesion 16, antes COPIAR_6_BYTES, un nombre puramente mecanico) segun su EFECTO EN PANTALLA: es lo que evita que la animacion del logo deje manchas al moverse -- repinta encima de la posicion anterior de una forma con el fondo que habia debajo, fila a fila, para que el deslizamiento se vea limpio. Antes marcada como parte del 'relleno sin identificar' (sesion 7) hasta que se encontro su llamador real (sesion 8); hasta sesion 16 seguia expresada como bytes en bruto (DB) en vez de mnemonicos LDI/RET.", category: "codigo" },
+  { start: 0xED92, end: 0xED9C, label: "variables de trabajo (SP_GUARDADO_PORTADA / VARIABLES_TRABAJO_FORMA / VARIABLES_TRABAJO_COLOR_TOPO)", detail: "10 bytes = 5 palabras de 16 bits. RESUELTO (sesion 16): no es tabla ni codigo, es RAM de trabajo (escrita antes de leerse en cada ejecucion) reutilizando este hueco de la zona de datos estatica -- mismo patron que VARIABLES_TRABAJO_FORMA en MSX, nombre compartido para los 2 punteros analogos (\$ED94/\$ED96). Los valores COMPILADOS aqui no son cero: son restos de una ejecucion real -- PUNTERO_DATOS_FORMA vale \$FADE, exactamente 1 byte pasado el ultimo byte de todo el payload (\$FADD, fin de LOGO_ESTRELLA_4), y los 2 punteros de ANIMAR_COLOR_TOPO valen exactamente 9 menos que sus valores iniciales (\$58CB/\$596B, coincide con el bucle de 9 vueltas de esa rutina) -- prueba de que el .tzx se genero volcando RAM tras ejecutar la portada, no desde un ensamblado limpio.", category: "tabla" },
+  { start: 0xED9C, end: 0xEF1C, label: "TABLA_FILAS_PANTALLA", detail: "384 bytes = 192 entradas de 2 bytes, una por cada fila de pixel de la pantalla del Spectrum (0-191). CONFIRMADA byte a byte: entrada 0 = \$4000, entrada 64 = \$4800 (inicio exacto del tercio central), entrada 191 = \$56E0 (verificado con la formula real de direccion de pantalla) -- la tabla clasica de conversion fila-de-pixel a direccion no lineal. Termina justo en el byte anterior a la primera forma del logo -- ni un byte de hueco. Extraida a fichero propio (data/img/logo/tabla_filas_pantalla.img) con INCBIN (sesion 8).", category: "tabla" },
+  { start: 0xEF1C, end: 0xEF9E, label: "TABLA_FORMAS / LOGO_SOFT_1", detail: "130 bytes (8 bytes/fila, cabecera 2 bytes, 128 de dibujo = 16 filas). Fotograma 1/7 de \"SOFT\". CONFIRMADO VISUALMENTE (sesion 6) -- ver recursos/logotopo_formas.html. \$EF1C tiene ADEMAS la etiqueta TABLA_FORMAS (alias, sesion 13) -- es el inicio del bloque completo de las 15 formas, y todos los desplazamientos de TABLA_PUNTEROS_FORMAS se calculan desde aqui, igual que en MSX.", category: "graficos" },
+  { start: 0xEF9E, end: 0xF020, label: "LOGO_SOFT_2", detail: "130 bytes. Fotograma 2/7 de \"SOFT\".", category: "graficos" },
+  { start: 0xF020, end: 0xF0A2, label: "LOGO_SOFT_3", detail: "130 bytes. Fotograma 3/7 de \"SOFT\".", category: "graficos" },
+  { start: 0xF0A2, end: 0xF124, label: "LOGO_SOFT_4", detail: "130 bytes. Fotograma 4/7 de \"SOFT\".", category: "graficos" },
+  { start: 0xF124, end: 0xF1A6, label: "LOGO_SOFT_5", detail: "130 bytes. Fotograma 5/7 de \"SOFT\".", category: "graficos" },
+  { start: 0xF1A6, end: 0xF228, label: "LOGO_SOFT_6", detail: "130 bytes. Fotograma 6/7 de \"SOFT\".", category: "graficos" },
+  { start: 0xF228, end: 0xF2AA, label: "LOGO_SOFT_7", detail: "130 bytes. Fotograma 7/7 de \"SOFT\".", category: "graficos" },
+  { start: 0xF2AA, end: 0xF5B2, label: "LOGO_T", detail: "776 bytes (9 bytes/fila, cabecera 2 bytes, 774 de dibujo = 86 filas, 0 muertos -- cifras corregidas sesion 20, las previas eran una aproximacion del ajuste visual manual). La letra T de TOPO. CONFIRMADA VISUALMENTE (sesion 6): se lee clara la barra horizontal + el trazo vertical.", category: "graficos" },
+  { start: 0xF5B2, end: 0xF69A, label: "LOGO_O1", detail: "232 bytes (5 bytes/fila, cabecera 2 bytes, 230 de dibujo = 46 filas). Primera O de TOPO.", category: "graficos" },
+  { start: 0xF69A, end: 0xF852, label: "LOGO_P", detail: "440 bytes (6 bytes/fila, cabecera 2 bytes, 438 de dibujo = 73 filas). La letra P de TOPO.", category: "graficos" },
+  { start: 0xF852, end: 0xF992, label: "LOGO_O2", detail: "320 bytes (6 bytes/fila, cabecera 2 bytes, 318 de dibujo = 53 filas). Segunda O de TOPO.", category: "graficos" },
+  { start: 0xF992, end: 0xF9E5, label: "LOGO_ESTRELLA_1", detail: "83 bytes (3 bytes/fila, cabecera 2 bytes, 81 de dibujo = 27 filas -- exacto el tamano hardcodeado de DIBUJAR_FORMA_ANIMADA). Fotograma 1/4 de la estrella.", category: "graficos" },
+  { start: 0xF9E5, end: 0xFA38, label: "LOGO_ESTRELLA_2", detail: "83 bytes. Fotograma 2/4 de la estrella.", category: "graficos" },
+  { start: 0xFA38, end: 0xFA8B, label: "LOGO_ESTRELLA_3", detail: "83 bytes. Fotograma 3/4 de la estrella.", category: "graficos" },
+  { start: 0xFA8B, end: 0xFADE, label: "LOGO_ESTRELLA_4", detail: "83 bytes. Fotograma 4/4 de la estrella. Termina exacto en el ultimo byte del payload de portada (\$FADD).", category: "graficos" },
+];
+
+const CATEGORY_VAR = {
+  codigo: "--c-codigo",
+  tabla: "--c-tabla",
+  graficos: "--c-graficos",
+  mecanico: "--c-mecanico",
+  sinexplorar: "--c-sinexplorar",
+};
+
+function fmtAddr(a) { return "0x" + a.toString(16).toUpperCase().padStart(4, "0"); }
+const span = RANGE_END - RANGE_START;
+const pct = (addr) => ((addr - RANGE_START) / span) * 100;
+
+const bar = document.getElementById("mem-bar");
+SEGMENTS.forEach((seg) => {
+  const div = document.createElement("div");
+  div.className = "mem-seg";
+  div.style.left = pct(seg.start) + "%";
+  div.style.width = (pct(seg.end) - pct(seg.start)) + "%";
+  div.style.background = "var(" + CATEGORY_VAR[seg.category] + ")";
+  div.title = fmtAddr(seg.start) + " - " + fmtAddr(seg.end) + "  (" + (seg.end - seg.start) + " bytes)\n" + seg.detail;
+  const widthPx = (pct(seg.end) - pct(seg.start)) / 100 * bar.clientWidth || 0;
+  if (widthPx > 30) {
+    const lbl = document.createElement("div");
+    lbl.className = "mem-seg-label";
+    lbl.textContent = seg.label;
+    div.appendChild(lbl);
+  }
+  bar.appendChild(div);
+});
+
+const ticks = document.getElementById("mem-ticks");
+for (let addr = RANGE_START; addr <= RANGE_END; addr += 0x0100) {
+  const t = document.createElement("div");
+  t.className = "tick";
+  t.style.left = pct(addr) + "%";
+  ticks.appendChild(t);
+  const l = document.createElement("div");
+  l.className = "tick-label";
+  l.style.left = pct(addr) + "%";
+  l.textContent = fmtAddr(addr);
+  ticks.appendChild(l);
+}
+
+const memTableBody = document.getElementById("mem-table-body");
+SEGMENTS.forEach((seg) => {
+  const tr = document.createElement("tr");
+  const size = seg.end - seg.start;
+  tr.innerHTML =
+    '<td class="addr">' + fmtAddr(seg.start) + " - " + fmtAddr(seg.end - 1) + '</td>' +
+    '<td class="addr">' + size + ' B</td>' +
+    '<td class="cat"><span class="row-swatch" style="background:var(' + CATEGORY_VAR[seg.category] + ')"></span>' + seg.label + '</td>' +
+    '<td>' + seg.detail + '</td>';
+  memTableBody.appendChild(tr);
+});
+</script>
+</body>
+</html>

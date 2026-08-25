@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<!-- Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com) -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Logo de Topo Soft (Spectrum) — explorador de formas</title>
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --fg: #2a2621;
+    --panel: #ffffff;
+    --border: #ddd6cc;
+    --muted: #7a7266;
+    --accent: #8a6ab0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1a17;
+      --fg: #ece6da;
+      --panel: #262320;
+      --border: #3a352e;
+      --muted: #a39a8a;
+      --accent: #a17fd0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem clamp(1rem, 4vw, 3rem);
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+  .subtitle { color: var(--muted); margin-top: 0; }
+  code { font-family: "SFMono-Regular", Consolas, monospace; }
+  .note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin: 1rem 0 2rem 0;
+    font-size: 0.92rem;
+    max-width: 60rem;
+  }
+  .note.warn { border-left-color: #c46a6a; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.2rem;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+  }
+  .card h2 {
+    font-size: 0.95rem;
+    margin: 0 0 0.3rem 0;
+  }
+  .card .meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+  .card .controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .card .controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .card .controls input[type=number] {
+    width: 4.5em;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.15rem 0.3rem;
+  }
+  .card .controls input[type=range] { width: 6rem; }
+  .card canvas {
+    display: block;
+    background: #000;
+    image-rendering: pixelated;
+    max-width: 100%;
+    border: 1px solid var(--border);
+  }
+  .zoom-wrap {
+    overflow: auto;
+    max-width: 100%;
+  }
+  .scale-row { display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; color:var(--muted); margin-top:0.4rem; }
+</style>
+</head>
+<body>
+
+<h1>Logo de Topo Soft (ZX Spectrum) — explorador de formas</h1>
+<p class="attribution-line" style="color:var(--muted);font-size:0.85rem;margin:-0.3rem 0 1.2rem 0;">Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com)</p>
+<p class="subtitle">Compañero de <code>src/FINDINGS.md</code> (sesiones 5-6): las 15 entradas de la tabla de punteros <code>$ECF1</code> (indexada por <code>$EA8E</code>, ver <code>src/portada_body.asm</code>, <code>DIBUJAR_FORMA_LOGO</code>) -- <strong>identificadas</strong> (SOFT × 7 fotogramas, T-O-P-O, estrella × 4 fotogramas), cada una con su ancho de fila real. Controles ajustables en vivo por si se quiere seguir explorando el resto del hueco sin analizar.</p>
+
+<div class="note">
+  <strong>CONFIRMADO VISUALMENTE por el usuario</strong> (ver
+  <code>FINDINGS.md</code>, sesión 6), jugando con los controles de
+  cada tarjeta: idx0-6 son los 7 fotogramas de <b>"SOFT"</b> (8
+  bytes/fila, cabecera de 2 bytes, 128 bytes de dibujo -- 16 filas
+  exactas); idx7 es la <b>T</b> de "TOPO" (9 bytes/fila, cabecera de 3
+  bytes, 765 bytes -- 85 filas); idx8/9/10 son <b>O</b>/<b>P</b>/<b>O</b>
+  (5, 6 y 6 bytes/fila respectivamente, cabecera de 2 bytes, 230/438/318
+  bytes); idx11-14 son los 4 fotogramas de una <b>estrella</b> (3
+  bytes/fila, cabecera de 2 bytes, 81 bytes -- 27 filas, EXACTO el
+  tamaño que <code>DIBUJAR_FORMA_LOGO</code> tiene hardcodeado con
+  <code>C=$1B</code>/<code>B=$03</code>, confirmando que esa rutina es
+  la que dibuja específicamente la estrella; "SOFT" y las letras deben
+  venir de otra rutina distinta, aún sin localizar). Cada grupo tiene
+  algunos bytes de más sin efecto visual (relleno/fin de bloque) --
+  ver la nota de cada tarjeta. Los controles se han dejado en estos
+  valores confirmados; cambia los números para seguir explorando el
+  resto del hueco sin analizar de <code>portada_body.asm</code>.
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const SHAPES = [{"idx":0,"addr":61212,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,224,31,240,3,255,159,254,63,248,127,252,7,255,159,254,120,60,248,62,30,0,144,194,112,1,192,7,56,0,0,192,63,253,128,3,63,128,0,192,15,253,192,7,63,128,0,192,112,28,240,30,48,0,0,192,56,56,124,124,48,0,0,192,31,240,31,240,48,0,0,192,7,192,7,192,48,0,0,192,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":1,"addr":61342,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,224,31,240,3,255,159,254,120,60,248,30,30,0,144,194,63,253,128,3,63,128,0,192,112,28,240,30,48,0,0,192,31,240,63,248,48,0,0,192,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":2,"addr":61472,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,224,127,252,3,255,159,254,63,253,192,7,63,128,0,192,31,240,127,252,48,0,0,192,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":3,"addr":61602,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,63,253,255,255,63,255,159,254,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":4,"addr":61732,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,240,127,252,48,0,0,192,63,253,192,7,63,128,0,192,31,224,127,252,3,255,159,254,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":5,"addr":61862,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,240,63,248,48,0,0,192,112,28,240,30,48,0,0,192,63,253,128,3,63,128,0,192,120,60,248,30,30,0,144,194,31,224,31,240,3,255,159,254,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":6,"addr":61992,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,192,7,192,48,0,0,192,31,240,31,240,48,0,0,192,56,56,124,124,48,0,0,192,112,28,240,30,48,0,0,192,15,253,192,7,63,128,0,192,63,253,128,3,63,128,0,192,112,1,192,7,56,0,0,192,120,60,248,62,30,0,144,194,63,248,127,252,7,255,159,254,31,224,31,240,3,255,159,254,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":7,"addr":62122,"bytes":[9,86,0,3,255,255,255,240,0,0,0,0,2,0,0,0,16,0,0,0,0,2,127,112,0,16,0,0,0,0,2,63,221,80,80,0,0,0,0,2,31,114,168,208,0,0,0,0,2,0,0,1,208,0,0,0,0,2,15,255,253,208,0,0,0,0,2,8,0,5,208,0,0,0,0,2,132,0,5,208,0,0,0,0,2,138,0,5,144,0,0,0,0,2,65,0,5,208,0,0,0,0,2,138,0,5,208,0,0,0,0,2,69,0,5,80,0,0,0,0,2,136,128,5,208,0,0,0,0,2,69,0,4,144,0,0,0,0,2,74,0,5,208,0,0,0,0,2,205,64,5,80,0,0,0,0,2,168,128,5,208,0,0,0,0,2,237,64,4,144,0,0,0,0,2,106,32,5,208,0,0,0,0,62,205,64,5,80,0,0,0,0,32,234,160,5,192,0,0,0,0,39,109,16,4,184,0,0,0,0,35,170,168,5,124,0,0,0,0,33,205,68,4,248,0,0,0,0,32,14,168,4,0,0,0,0,0,32,255,80,7,240,0,0,0,0,32,254,170,0,32,0,0,0,0,32,255,69,0,32,0,0,0,0,40,255,170,0,64,0,0,0,0,32,255,209,64,64,0,0,0,0,40,255,234,32,128,0,0,0,0,36,255,213,80,128,0,0,0,0,40,191,234,168,128,0,0,0,0,36,191,244,4,128,0,0,0,0,40,191,254,171,0,0,0,0,0,36,159,255,208,0,0,0,0,0,40,135,255,248,0,0,0,0,0,36,128,0,0,0,0,0,0,0,40,128,0,1,0,0,0,0,0,36,128,0,1,0,0,0,0,0,40,128,0,1,0,0,0,0,0,38,128,0,1,128,0,0,0,0,36,128,0,0,128,0,0,0,0,46,252,0,3,128,0,0,0,0,42,4,0,15,128,0,0,0,0,45,100,0,127,192,0,0,0,0,43,196,0,255,192,0,0,0,0,38,134,3,255,224,0,0,0,0,32,2,7,255,224,0,0,0,0,63,130,31,255,240,0,0,0,0,0,131,63,255,248,0,0,0,0,0,129,255,255,248,0,0,0,0,0,193,255,255,252,0,0,0,0,0,65,255,255,254,0,0,0,0,0,64,255,255,255,0,0,0,0,0,96,255,255,255,192,0,0,0,0,32,127,255,255,240,0,1,0,0,48,127,255,255,252,0,7,0,0,18,63,255,255,255,192,127,0,0,25,63,255,255,255,255,255,0,0,10,159,255,255,255,255,255,0,0,13,79,255,255,255,255,250,0,0,6,143,255,255,255,255,213,0,0,2,87,255,255,255,254,170,0,0,3,43,255,255,255,253,85,0,0,1,149,255,255,255,250,170,0,0,0,206,255,255,255,253,85,0,0,0,91,127,255,255,250,170,0,0,0,110,191,255,255,245,85,0,0,0,55,223,255,255,250,170,0,0,0,26,239,255,255,245,85,0,0,0,13,243,255,255,234,170,0,0,0,6,125,255,255,245,85,0,0,0,3,190,127,255,234,170,0,0,0,0,223,159,255,245,85,0,0,0,0,103,231,255,234,170,0,0,0,0,59,232,255,213,85,0,0,0,0,12,254,31,234,170,0,0,0,0,7,43,64,213,64,0,0,0,0,1,206,170,0,0,0,0,0,0,0,113,21,0,0,0,0,0,0,0,30,0,0,0,0,0,0,0,0,3,192,0,0,0,0,0,0,0,0,126,0,15,0,0,0,0,0,0,3,255,248]},{"idx":8,"addr":62898,"bytes":[5,46,0,0,255,224,0,0,15,128,62,0,0,56,10,131,128,0,224,21,124,224,3,128,10,187,56,6,0,0,127,140,12,0,42,134,244,8,1,85,65,248,0,10,170,128,120,0,53,85,0,56,0,106,170,160,8,1,245,85,64,0,3,250,170,168,0,3,245,85,80,0,7,250,170,160,0,15,245,85,84,0,15,250,170,168,0,31,253,85,85,8,31,254,170,170,20,63,253,85,85,56,63,254,170,170,180,63,255,85,85,58,63,254,170,170,157,127,255,213,85,42,63,255,250,170,31,15,255,255,208,14,0,0,0,0,0,16,0,0,0,64,40,0,0,0,0,16,0,0,0,64,8,0,0,0,104,4,0,0,0,84,10,0,0,0,122,1,0,0,0,93,10,128,0,0,119,4,64,0,0,127,2,32,0,0,94,1,80,0,0,118,2,170,128,0,124,1,85,80,0,120,0,168,170,0,120,0,85,69,85,112,0,10,170,42,64,0,5,85,84,0,0,0,162,168,0,0,0,21,0,0]},{"idx":9,"addr":63130,"bytes":[6,73,0,0,255,224,0,0,0,15,128,62,0,0,0,56,2,131,128,0,0,224,21,124,224,0,3,128,10,173,56,0,6,0,0,63,204,0,4,0,21,70,244,0,0,2,170,1,248,0,0,15,85,0,120,0,0,63,170,0,56,0,0,127,213,0,8,0,1,255,234,0,0,0,3,255,213,0,0,0,3,255,234,0,0,0,1,255,213,64,0,0,0,255,170,128,8,0,0,255,213,64,4,0,8,127,170,128,10,0,20,127,213,80,20,0,56,63,234,160,42,0,52,63,213,80,21,0,58,63,234,168,62,0,29,63,245,81,63,0,42,31,250,168,127,0,31,15,253,84,63,0,14,3,254,168,14,0,0,0,0,0,0,0,64,80,0,1,0,0,0,80,0,1,0,0,64,80,0,1,4,0,104,160,0,0,130,0,84,160,0,0,149,0,122,160,0,0,170,0,93,170,160,0,149,0,119,21,81,64,74,0,127,106,170,170,213,0,94,149,85,85,106,0,118,42,170,170,164,0,125,21,85,85,116,0,122,170,170,170,184,0,121,85,85,85,120,0,114,170,170,170,240,0,69,85,85,85,192,0,42,170,170,255,184,0,85,85,95,254,104,0,106,170,191,249,184,0,117,87,255,194,224,0,106,175,248,5,72,0,117,95,248,2,56,0,122,191,250,0,224,0,63,255,251,3,128,0,87,255,251,158,0,0,43,255,251,176,0,0,85,255,251,160,0,0,43,255,241,160,0,0,85,255,224,32,0,0,42,255,192,96,0,0,85,255,128,192,0,0,42,255,1,128,0,0,85,126,67,0,0,0,42,248,166,0,0,0,85,117,76,0,0,0,42,138,184,0,0,0,85,53,96,0,0,0,40,232,192,0,0,0,67,179,128,0,0,0,31,230,0,0,0,0,127,156,0,0,0,0,126,112,0,0,0,0,113,192,0,0,0,0,15,0,0,0,0,0,120,0,0,0,0,0,192,0,0,0,0,0]},{"idx":10,"addr":63570,"bytes":[6,53,0,0,255,240,0,0,0,15,128,62,0,0,0,56,1,67,128,0,0,224,42,172,224,0,3,128,69,91,56,0,6,0,0,63,204,0,4,0,40,6,182,0,0,3,212,1,251,0,0,15,170,0,125,128,0,63,213,0,62,192,0,127,170,0,15,96,1,255,213,0,7,176,3,255,170,0,3,208,3,255,213,0,3,88,1,255,234,128,1,200,8,255,213,0,0,108,4,255,234,128,0,244,10,127,245,64,0,86,20,127,234,160,0,122,42,63,245,80,1,178,21,63,250,168,3,170,62,63,253,85,17,147,63,63,255,170,172,169,127,223,255,213,84,149,63,143,255,250,184,73,14,3,255,255,224,65,0,0,0,0,0,65,0,16,0,0,0,65,0,16,0,0,0,65,4,16,0,0,0,65,2,160,0,0,0,161,21,160,0,0,0,147,42,164,0,0,0,170,21,106,128,0,0,146,10,85,80,0,1,42,21,106,168,0,1,86,10,245,85,0,2,164,4,254,170,128,2,204,5,255,85,64,5,104,3,255,234,128,11,216,3,255,245,64,9,208,1,255,250,160,55,48,0,127,253,80,75,96,0,63,250,169,190,192,0,15,253,94,125,128,0,3,255,249,251,0,4,0,63,135,246,0,6,5,64,95,204,0,3,130,173,247,56,0,0,229,87,124,224,0,0,56,45,195,128,0,0,15,128,62,0,0,0,0,255,224,0,0]},{"idx":11,"addr":63890,"bytes":[3,27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,0,254,0,0,254,240,0,194,0,0,192,0,0,193,0,0,193,0,0,192,0,0,192,0,0,192,0,0,192,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":12,"addr":63973,"bytes":[3,27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,64,0,254,0,0,254,254,0,194,0,0,192,0,0,193,64,0,193,0,0,193,0,0,193,0,0,193,0,0,192,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"idx":13,"addr":64056,"bytes":[3,27,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,17,32,0,0,64,0,254,0,0,254,255,128,194,0,0,192,0,0,201,64,0,193,32,0,193,0,0,193,0,0,193,0,0,193,0,0,1,0,0,0,0,0,0,0,0,0,0,0]},{"idx":14,"addr":64139,"bytes":[3,27,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,33,16,0,17,32,0,0,64,0,254,0,0,254,255,240,194,0,0,192,0,0,201,64,0,209,32,0,193,16,0,193,0,0,193,0,0,193,0,0,1,0,0,1,0,0,1,0,0,1,0,0]}];
+
+const SCALE = 3;
+
+// Parametros CONFIRMADOS VISUALMENTE por el usuario (ver FINDINGS.md,
+// sesion 6) -- w=bytes/fila, skip=bytes de cabecera, total=bytes de
+// dibujo tras la cabecera. idx11-14 (w=3,skip=2,total=81) coincide
+// EXACTO con las constantes hardcodeadas de DIBUJAR_FORMA_LOGO
+// (C=$1B=27 filas, B=$03=3 bytes/fila) -- confirma que esa rutina es
+// la que dibuja la estrella; "SOFT" y las letras vienen de otra
+// rutina todavia sin localizar.
+const DEFAULTS = {
+  0: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 1/7)' },
+  1: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 2/7)' },
+  2: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 3/7)' },
+  3: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 4/7)' },
+  4: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 5/7)' },
+  5: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 6/7)' },
+  6: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 7/7)' },
+  7: { w: 9, skip: 3, total: 765, name: 'T de TOPO' },
+  8: { w: 5, skip: 2, total: 230, name: 'O (1ª) de TOPO' },
+  9: { w: 6, skip: 2, total: 438, name: 'P de TOPO' },
+  10: { w: 6, skip: 2, total: 318, name: 'O (2ª) de TOPO' },
+  11: { w: 3, skip: 2, total: 81, name: 'estrella (fotograma 1/4)' },
+  12: { w: 3, skip: 2, total: 81, name: 'estrella (fotograma 2/4)' },
+  13: { w: 3, skip: 2, total: 81, name: 'estrella (fotograma 3/4)' },
+  14: { w: 3, skip: 2, total: 81, name: 'estrella (fotograma 4/4)' },
+};
+
+function renderShape(shape, canvas, bytesPerRow, skip, total) {
+  const avail = shape.bytes.length - skip;
+  const useTotal = Math.max(bytesPerRow, Math.min(total, avail - (avail % bytesPerRow || 0) || avail));
+  const rows = Math.max(1, Math.floor(useTotal / bytesPerRow));
+  canvas.width = bytesPerRow * 8 * SCALE;
+  canvas.height = rows * SCALE;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#0f0";
+  for (let y = 0; y < rows; y++) {
+    for (let bx = 0; bx < bytesPerRow; bx++) {
+      const idx = skip + y * bytesPerRow + bx;
+      const byte = shape.bytes[idx];
+      if (byte === undefined) continue;
+      for (let x = 0; x < 8; x++) {
+        if (byte & (0x80 >> x)) {
+          ctx.fillRect((bx * 8 + x) * SCALE, y * SCALE, SCALE, SCALE);
+        }
+      }
+    }
+  }
+}
+
+const grid = document.getElementById("grid");
+SHAPES.forEach((shape) => {
+  const def = DEFAULTS[shape.idx] || { w: 3, skip: 0, total: Math.min(81, shape.bytes.length), name: "?" };
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const h2 = document.createElement("h2");
+  h2.textContent = "idx " + shape.idx + " -- " + def.name + "  ($" + shape.addr.toString(16).toUpperCase() + ")";
+  card.appendChild(h2);
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = shape.bytes.length + " bytes disponibles (hasta la siguiente forma o fin de portada_body.asm)";
+  card.appendChild(meta);
+
+  const controls = document.createElement("div");
+  controls.className = "controls";
+
+  function numInput(labelText, value, min, max) {
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(min);
+    input.max = String(max);
+    input.value = String(value);
+    label.appendChild(input);
+    return [label, input];
+  }
+
+  const [lblWidth, inWidth] = numInput("bytes/fila:", def.w, 1, 16);
+  const [lblSkip, inSkip] = numInput("saltar:", def.skip, 0, shape.bytes.length);
+  const [lblTotal, inTotal] = numInput("total bytes:", Math.min(def.total, shape.bytes.length), 1, shape.bytes.length);
+  controls.appendChild(lblWidth);
+  controls.appendChild(lblSkip);
+  controls.appendChild(lblTotal);
+  card.appendChild(controls);
+
+  const zoomWrap = document.createElement("div");
+  zoomWrap.className = "zoom-wrap";
+  const canvas = document.createElement("canvas");
+  zoomWrap.appendChild(canvas);
+  card.appendChild(zoomWrap);
+
+  function update() {
+    const w = Math.max(1, parseInt(inWidth.value, 10) || 1);
+    const s = Math.max(0, Math.min(shape.bytes.length - 1, parseInt(inSkip.value, 10) || 0));
+    const t = Math.max(1, parseInt(inTotal.value, 10) || 1);
+    renderShape(shape, canvas, w, s, t);
+  }
+  [inWidth, inSkip, inTotal].forEach((el) => el.addEventListener("input", update));
+
+  grid.appendChild(card);
+  update();
+});
+</script>
+</body>
+</html>
