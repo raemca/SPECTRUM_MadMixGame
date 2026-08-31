@@ -8,7 +8,7 @@ diario de descubrimientos completo, sesión a sesión.
 
 ## Estado
 
-Los **5 binarios de la cadena de arranque completa** (cinta → portada
+Los **7 binarios de la cadena de arranque completa** (cinta → portada
 → loader → motor) están reconstruidos y **verificados byte a byte
 contra el original**:
 
@@ -55,15 +55,29 @@ contra el original**:
   tratado como recurso de datos (`INCBIN` de `data/img/pantalla_carga.img`),
   no como desensamblado falso.
 - **`madmix_body.asm`** → `CODE.bin`, 36790 bytes en `$6000`. El motor
-  completo del juego. **Reconstrucción mecánica de primera pasada**
-  (`tools/dasm2asm.py`), análisis semántico **recién empezado**
-  (sesión 22): resuelta la cadena de arranque inicial (`MOTOR_INICIO`
-  → `INICIO`, activación de interrupciones en modo 2,
-  `ENTRADA_INTERRUPCION_VBLANK`), comparando con `madmix1_body.asm`/
-  `madmix_scr_body.asm` de MSX igual que se hizo con la portada. Queda
-  pendiente casi todo el resto: identificar qué tramos son datos, el
-  bucle principal, el driver de sonido, las tablas de nivel, los
-  sprites, la pantalla de créditos.
+  completo del juego. Empezó como reconstrucción mecánica de primera
+  pasada (`tools/dasm2asm.py`); a partir de sesión 22 el análisis
+  semántico ha ido resolviendo, comparando sistemáticamente con
+  `madmix1_body.asm`/`madmix_scr_body.asm` de MSX, subsistema tras
+  subsistema: la cadena de arranque completa (`INICIO`,
+  `REINICIAR_PARTIDA`/`PANTALLA_PRESENTACION_NIVEL`,
+  `PREPARAR_INICIO_NIVEL`), el bucle principal
+  (`BUCLE_PRINCIPAL_JUEGO`), el motor de colisión/movimiento
+  (`MOTOR_MOVIMIENTO_COLISION`), la carga de niveles (`CARGAR_NIVEL`,
+  15 niveles), el motor de sprites (`MOTOR_ACTORES` + los 64 sprites
+  del comecocos/enemigos), el sistema de items (fantasmas,
+  Pelmazoide/Maricoco/Repugnantoso), el motor de sonido completo de 2
+  canales (música + percusión + efectos, `$E038`), la entrada de
+  teclado/joystick (esquema QAOP por defecto, joystick Sinclair
+  Interface 2 emulado y Kempston real vía puerto `$1F`), el marcador
+  de puntuación/HUD, el menú de selección de controles, la
+  redefinición de teclas y la pantalla de créditos. El inventario
+  buscable de `recursos/flujo_programa.html`
+  (`py tools/gen_inventory.py`) lleva la cuenta siempre actualizada de
+  cuántas etiquetas quedan sin resolver — a día de hoy solo quedan
+  puñados sueltos de bytes sin identificar y los guiones de música sin
+  decodificar canción por canción (ver "Pendiente para próximas
+  sesiones" al final de `../FINDINGS.md`).
 
 Ver `../FINDINGS.md` (sesiones 2 y 3) para la cadena de arranque
 completa reconstruida paso a paso y el detalle técnico de cada
@@ -75,14 +89,24 @@ solo espacio de símbolos). Y el `.tzx` completo ya se reconstruye
 desde cero y compila **byte a byte idéntico** al original (ver
 "Compilar" más abajo).
 
-Todavía no existen (se irán creando según avance el análisis semántico
-de `madmix_body.asm`/`portada_body.asm`, mismo patrón que el proyecto
-hermano de MSX):
+`data/` ya contiene los recursos identificados dentro de
+`madmix_body.asm`, cada uno incluido en la fuente vía `INCBIN` (mismo
+patrón que el proyecto hermano de MSX):
 
-- `data/tiles/`, `data/sprites/`, `data/sound/`, `data/niveles/` —
-  recursos individuales, una vez identificados dentro de `madmix_body.asm`
-  (de momento solo existe `data/img/pantalla_carga.img`, la pantalla
-  de carga completa sin recortar en tiles).
+- `data/img/sprites/` — los 64 sprites del comecocos y enemigos (144
+  bytes cada uno, 2 planos AND/OR de 24×24 px).
+- `data/img/tiles/` — las 91 losetas del motor (muros, suelo,
+  trampillas, ítems...).
+- `data/img/logo/` — las 15 formas gráficas de la portada animada.
+- `data/img/marco_decorativo/` y `data/img/texto/` — el marco
+  decorativo de la pantalla de presentación y la fuente de texto del
+  HUD.
+- `data/niveles/` — los 15 niveles (cabecera + cuerpo + pie) más las 3
+  cabeceras de zonas especiales.
+- `data/sound/` — guiones de música (`snd/`), subpatrones (`spt/`) y
+  guiones de demo (`demo/`) del motor de sonido.
+- `data/img/pantalla_carga.img` — la pantalla de carga completa (dato,
+  no código, ver `load_cas/screen_body.asm`).
 
 ## Convenciones
 
@@ -198,8 +222,9 @@ exacto.
 - `Z80Dasm.exe` (Marcel de Kogel) para el primer desensamblado de cada
   binario nuevo — copia disponible en
   `../../MSX/compiladores/Z80Dasm/Z80Dasm.exe`.
-- Python 3 (`py` en Windows) — para `tools/zxbasic_tool.py` y
-  `tools/dasm2asm.py`.
+- Python 3 (`py` en Windows) — para las herramientas de `tools/`
+  (`zxbasic_tool.py`, `dasm2asm.py`, `gen_inventory.py`, `mmlvl_tool.py`,
+  `mmsnd_tool.py`/`mmsnd_render.py`, `mmesquema_sim.py`).
 - Un emulador de ZX Spectrum con ROM de 48K (p. ej.
   [ZEsarUX](https://github.com/chernandezba/zesarux)) para probar y
   para contrastar hallazgos contra la ROM real.

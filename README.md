@@ -21,9 +21,7 @@ debida autorización. Ver `AVISO-LEGAL.md` para el detalle completo.
 
 Estado actual
 -------------
-Todavía muy inicial en cuanto a COMPRENSIÓN del código (nada
-comparable aún al análisis semántico del proyecto MSX), pero los
-**5 binarios de la versión de cinta ya están reconstruidos y
+Los **7 binarios de la versión de cinta están reconstruidos y
 verificados byte a byte** — la cadena de arranque completa, de la
 cinta al motor de juego, es reproducible al 100%:
 
@@ -31,19 +29,29 @@ cinta al motor de juego, es reproducible al 100%:
 |---|---|---|---|
 | `src/load_cas/madmix_bas.bas` (BASIC editable) | — | 81 | 0 diferencias |
 | `src/load_cas/portada_stub_body.asm` | `$5D1C` | 14 | 0 diferencias |
-| `src/portada_body.asm` (portada, 1ª pasada mecánica) | `$EA60` | 4222 | 0 diferencias |
+| `src/portada_body.asm` (portada) | `$EA60` | 4222 | 0 diferencias |
 | `src/load_cas/madmix2_bas.bas` (BASIC editable) | — | 71 | 0 diferencias |
 | `src/load_cas/loader_body.asm` | `$EFB6` | 196 | 0 diferencias |
 | `src/load_cas/screen_body.asm` (dato, no código) | `$4000` | 6912 | 0 diferencias |
-| `src/madmix_body.asm` (motor, 1ª pasada mecánica) | `$6000` | 36790 | 0 diferencias |
+| `src/madmix_body.asm` (motor) | `$6000` | 36790 | 0 diferencias |
 
-`loader_body.asm` y `portada_stub_body.asm` tienen análisis semántico
-real (etiquetas con significado, comparados contra la ROM). `madmix_body.asm`
-y `portada_body.asm` son reconstrucciones MECÁNICAS de primera pasada
-(desensamblado lineal con `tools/dasm2asm.py`, etiquetas solo por
-dirección) — recompilan idénticas al original pero todavía no
-distinguen qué tramos son datos (sprites, niveles, sonido) frente a
-código real; eso es el trabajo de las próximas sesiones.
+El análisis semántico ha avanzado mucho más allá de la reconstrucción
+mecánica inicial: `loader_body.asm`, `portada_stub_body.asm` y
+`portada_body.asm` (logo animado de Topo Soft) están **cerrados, con
+análisis semántico completo** — mismos nombres que sus equivalentes ya
+resueltos en el proyecto hermano de MSX cuando existe correspondencia.
+`madmix_body.asm` (el motor completo del juego) tiene ya cientos de
+rutinas y tablas identificadas y nombradas — motor de sonido de 2
+canales, sistema de entrada (teclado QAOP, joystick Sinclair
+emulado y Kempston real), carga y motor de niveles, los 64 sprites del
+comecocos/enemigos, marcador de puntuación y HUD, secuencia de
+arranque, menú de controles, redefinición de teclas, créditos, modo
+demo... — con `recursos/flujo_programa.html` manteniendo un inventario
+buscable siempre actualizado (regenerado con `tools/gen_inventory.py`)
+del total de etiquetas y cuántas siguen sin resolver. Quedan solo
+puñados sueltos de bytes sin identificar y los guiones de música sin
+decodificar canción por canción — ver la lista "Pendiente para
+próximas sesiones" al final de `FINDINGS.md`.
 
 Ver `FINDINGS.md` para el diario de descubrimientos con el detalle
 técnico completo de cada hallazgo (incluida la cadena de arranque
@@ -80,20 +88,34 @@ Estructura del repositorio
 - `src/` — fuente ensamblador reconstruido y `main.asm` (punto de
   entrada único de compilación) — ver `src/README.md`/`FINDINGS.md`.
 - `src/build/` — binarios compilados (`py tools/build_all.py`).
+- `src/data/` — recursos ya identificados y extraídos a fichero
+  individual, incluidos en la fuente vía `INCBIN`: `img/sprites/` (64),
+  `img/tiles/` (91 losetas), `img/logo/` (las 15 formas de la
+  portada), `niveles/` (los 15 niveles + cabeceras), `sound/` (guiones
+  de música/efectos/subpatrones) — ver `src/README.md` para el detalle
+  de cada uno.
 - `build/` — entregable final, `madmix_reconstruido.tzx`
   (`py tools/gen_tzx_file.py`).
 - `tools/` — `zxbasic_tool.py` (detokenizador BASIC), `dasm2asm.py`
-  (conversor Z80Dasm → SjASMPlus), `build_all.py`, `gen_tzx_file.py`.
+  (conversor Z80Dasm → SjASMPlus), `build_all.py`, `gen_tzx_file.py`,
+  `gen_inventory.py` (inventario de etiquetas → `flujo_programa.html`),
+  `mmlvl_tool.py` (niveles), `mmsnd_tool.py`/`mmsnd_render.py`
+  (extracción y renderizado a `.wav` de la música/efectos) y
+  `mmesquema_sim.py` (simulador Z80 mínimo usado para verificar el
+  esquema de color del HUD por ejecución real, no solo lectura).
 - `manuales/` — manuales técnicos de referencia (aún por crear).
 - `recursos/` — visores HTML autocontenidos: `mapa_memoria.html`
   (distribución de la RAM 0x0000-0xFFFF), `mapa_memoria_logotopo.html`
   (zoom al rango `$EA60-$FADD` donde se dibuja el logo animado, misma
   memoria que luego reutiliza el motor), `flujo_programa.html`
   (diagrama de arranque + inventario buscable de las etiquetas de
-  todos los ficheros fuente, regenerado con `tools/gen_inventory.py`)
-  y `logotopo_formas.html` (las 15 formas del logo de Topo Soft ya
+  todos los ficheros fuente, regenerado con `tools/gen_inventory.py`),
+  `logotopo_formas.html` (las 15 formas del logo de Topo Soft ya
   identificadas — SOFT×7, T-O-P-O, estrella×4 — con controles
-  ajustables en vivo). Documentos vivos, se amplían sesión a sesión.
+  ajustables en vivo), `portada.html` (visor de la portada animada
+  completa), `graficos.html` (tiles/losetas del motor) y
+  `sprites.html` (los 64 sprites del comecocos y enemigos). Documentos
+  vivos, se amplían sesión a sesión.
 - `dump/` — volcados de memoria/pantalla de un emulador real, usados
   como evidencia al verificar hallazgos (aún por crear).
 
@@ -103,8 +125,7 @@ Dependencias y entorno
   usado para recompilar la fuente reconstruida.
 - `Z80Dasm.exe` (Marcel de Kogel) — desensamblador usado como primer
   paso sobre cada binario nuevo, igual que en el proyecto MSX.
-- Python 3 (`py` en Windows) — para las herramientas de `tools/`
-  cuando se vayan creando.
+- Python 3 (`py` en Windows) — para las herramientas de `tools/`.
 - Un emulador de ZX Spectrum (p. ej. [ZEsarUX](https://github.com/chernandezba/zesarux))
   para probar y para contrastar contra la ROM real.
 
