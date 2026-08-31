@@ -101,7 +101,7 @@ REGISTRO_NIVEL_PIE_PTR:           ; $600B, 2 bytes (word)
     DW 0
 REGISTRO_NIVEL_FILAS:             ; $600D, 1 byte
     DB 18
-    DB $01                        ; $600E, referenciada en CODE_9C76
+    DB $01                        ; $600E, referenciada en COMPROBAR_AVISO_ULTIMA_VIDA
                                 ; ("LD A,($600E) / CP 1"), sin
                                 ; correspondencia MSX identificada
 REGISTRO_NIVEL_CONTADOR_PELMAZOIDES:  ; $600F, 1 byte -- mismo nombre EXACTO
@@ -248,7 +248,7 @@ VIDAS_RESTANTES:                  ; $603A, 1 byte -- HIPOTESIS (sesion 22)
     DB $00                        ; $603B, sin identificar
 PUNTUACION:                       ; $603C, 2 bytes (word) -- HIPOTESIS (sesion 22)
     DW 0
-    DB $00                        ; $603E, referenciada en CODE_9C5B
+    DB $00                        ; $603E, referenciada en COMPROBAR_VIDA_EXTRA
                                 ; ("LD HL,$603E / LD A,(HL)"), sin
                                 ; correspondencia MSX identificada
 CONTADOR_VUELTAS_NIVELES:         ; $603F, 1 byte
@@ -438,7 +438,7 @@ SUBTABLA_DIRECCION_D:                   ; $60B9, 20 bytes
 ; verificada instruccion a instruccion) y TABLA_MANEJADORES_LOSETA
 ; (candidata, $6266, despachador por tipo de loseta -- en MSX tiene 20
 ; entradas; en Spectrum sin extraer/etiquetar todavia, queda pendiente).
-; Llamada desde CODE_9CCB (sesion 22-23) y BUCLE_PRINCIPAL_JUEGO (el
+; Llamada desde BUSCAR_COLUMNA_HUD (sesion 22-23) y BUCLE_PRINCIPAL_JUEGO (el
 ; bucle principal, sesion 34). Los sub-bloques internos
 ; (SALTAR_A_LEER_ENTRADA, PROCESAR_DIRECCION, LIMPIAR_FLAG_DIRECCION,
 ; COPIAR_FLAG_DIRECCION, CALCULAR_MASCARA_ALINEAMIENTO,
@@ -595,7 +595,9 @@ TICK_MODO_HIPOPOTAMO:
     CP $3C
     JR NC,OBTENER_SUBTABLA_DIRECCION
     AND $01
-    LD A,($9E12)
+    LD A,(TABLA_POSICIONES_HUD+17)               ; RESUELTO sesion 56: antes $9E12,
+                                ; "columna objetivo"/valor de icono de TABLA_POSICIONES_HUD
+                                ; (mismo offset +17 que en MSX, ver BUSCAR_COLUMNA_HUD)
     JR NZ,PARPADEO_ICONO_HIPOPOTAMO
     XOR $40
 PARPADEO_ICONO_HIPOPOTAMO:
@@ -1057,7 +1059,9 @@ HNDLR_PISTA_COCOTANQUE_ACTIVATE:
     LD (EVENTO_SONIDO_PENDIENTE),A
     LD A,(COLOR_ACTUAL)
     LD (COLOR_GUARDADO),A
-    LD ($9E13),A
+    LD (TABLA_POSICIONES_HUD+18),A               ; RESUELTO sesion 56: antes $9E13,
+                                ; guarda COLOR_ACTUAL para restaurar (mismo offset
+                                ; +18 que MSX, ver DESTELLO_ICONO_COLOR_HUD)
     LD A,(REGISTRO_NIVEL_ICONO_HUD)
     LD (COLOR_ACTUAL),A
     LD A,$01
@@ -2741,9 +2745,10 @@ LOOP_LIMPIEZA_PISTA:
 ;
 ; POSICION_PARPADEO_BOLA es el resultado de MAPEAR_COORDENADA_A_DIRECCION
 ; (CONFIRMADA sesion 40, ver MOTOR_MOVIMIENTO_ITEM -- coincide
-; instruccion a instruccion con MSX). $9E12/$9E13 (al final) no tienen
-; equivalente identificado en MSX todavia -- posible dato especifico
-; de esta version o zona de trabajo distinta sin relacion directa.
+; instruccion a instruccion con MSX). $9E12/$9E13 -- RESUELTO sesion
+; 56: SI tienen equivalente MSX, son TABLA_POSICIONES_HUD+17/+18 (ver
+; DESTELLO_ICONO_COLOR_HUD/BUSCAR_COLUMNA_HUD), aqui reinicializados a
+; juego con COLOR_ACTUAL/REGISTRO_NIVEL_ICONO_HUD al cargar nivel.
 ; INICIALIZAR_ITEMS_NIVEL tambien RESUELTA POR COMPLETO (ver su propia
 ; cabecera mas abajo). Etiquetas internas de este bloque
 ; (COPIAR_REGISTRO_NIVEL y siguientes) nombradas sesion 56 tirando del
@@ -2845,9 +2850,9 @@ INICIALIZAR_ESTADO_NIVEL:
     LD A,$78
     LD (COLOR_ACTUAL),A
     LD (COLOR_GUARDADO),A
-    LD ($9E13),A                 ; sin equivalente MSX identificado todavia
+    LD (TABLA_POSICIONES_HUD+18),A               ; RESUELTO sesion 56 (antes $9E13)
     LD A,(REGISTRO_NIVEL_ICONO_HUD)
-    LD ($9E12),A                 ; sin equivalente MSX identificado todavia
+    LD (TABLA_POSICIONES_HUD+17),A               ; RESUELTO sesion 56 (antes $9E12)
     LD HL,$1018
     LD (POSICION_ACTUAL_CAMARA),HL
     CALL INICIALIZAR_ITEMS_NIVEL
@@ -3796,7 +3801,7 @@ APLICAR_DIRECCION_DEMO:
     LD D,A
     CALL ENTRADA_MOTOR_MOVIMIENTO_COLISION
     CALL WAIT_VBLANK
-    CALL CODE_9DD1
+    CALL ACTUALIZAR_PARPADEO_BOLA
     LD B,$FE
     LD C,$FE
 ESPERA_TECLA_ABORTAR_DEMO:
@@ -5942,7 +5947,7 @@ DIBUJAR_MARCADOR_PUNTOS:
     LD A,(INDICE_CICLO_NIVELES)
     AND A
     LD IX,$9A89
-    JR NZ,CODE_9A30
+    JR NZ,DIBUJAR_TEXTO_MARCADOR
     EX DE,HL
     LD HL,(PUNTUACION)
     ADD HL,DE
@@ -5951,49 +5956,81 @@ DIBUJAR_MARCADOR_PUNTOS:
     LD DE,$2710
     SBC HL,DE
     LD IX,$9A82
-    JR NC,CODE_9A30
+    JR NC,DIBUJAR_TEXTO_MARCADOR
     ADD HL,DE
     LD DE,$9A7B
-    CALL CODE_9A3E
+    CALL CONVERTIR_PUNTUACION_A_TEXTO
     LD IX,$9A7B
-CODE_9A30:
+; --- DIBUJAR_TEXTO_MARCADOR (antes CODE_9A30): RESUELTA sesion 56.
+; Cola comun de las 3 ramas de DIBUJAR_MARCADOR_PUNTOS -- decidido ya
+; que IX apunta a la etiqueta a pintar (digitos de puntuacion en
+; BUFFER_TEXTO_PUNTUACION, ETIQUETA_PUNTUACION_MAXIMA "BESTIA" o
+; ETIQUETA_PUNTUACION_DEMO " DEMO "), aqui se fija la posicion fija de
+; pantalla del marcador (B=$B0=Y176, C=$B0->columna 22, formula de
+; CALCULAR_DIRECCION_PANTALLA) y se llama a DIBUJAR_CADENA_VRAM (rutina
+; de dibujo de cadena en VRAM, hermana de ESCRIBIR_PATRON_VRAM pero para
+; una cadena completa terminada en $FF en vez de un solo caracter). ---
+DIBUJAR_TEXTO_MARCADOR:
     LD B,$B0
     LD C,$B0
-    CALL CODE_9A90
+    CALL DIBUJAR_CADENA_VRAM
     POP IX
     POP BC
     POP DE
     POP HL
     POP AF
     RET
-CODE_9A3E:
+; --- CONVERTIR_PUNTUACION_A_TEXTO (antes CODE_9A3E): RESUELTA sesion
+; 56. Convierte el valor binario de HL (la puntuacion) en digitos ASCII
+; escritos en el buffer apuntado por DE ($9A7B, BUFFER_TEXTO_PUNTUACION)
+; mediante division por resta repetida contra TABLA_VALORES_DECIMAL_
+; PUNTUACION (1000,100,10). Guarda la direccion del buffer en el par DE
+; sombra (EXX) como puntero de escritura fijo, mientras el DE primario
+; hace de contador de posicion dentro del buffer (INC E en
+; ESCRIBIR_DIGITO_PUNTUACION). ---
+CONVERTIR_PUNTUACION_A_TEXTO:
     PUSH DE
     EXX
     POP DE
     EXX
     LD IX,$9A75
     LD DE,$0000
-CODE_9A49:
+; --- BUCLE_CONVERTIR_PUNTUACION (antes CODE_9A49): RESUELTA sesion 56
+; (nombre ya anticipado en el comentario de TABLA_VALORES_DECIMAL_
+; PUNTUACION, mas abajo). Por cada divisor de la tabla (1000,100,10):
+; lo carga en BC y resetea el contador de digito (A=0). Se detiene --
+; cae fuera del bucle sin volver aqui-- en cuanto el divisor leido es
+; 10, que hace doble uso de centinela de fin de tabla. ---
+BUCLE_CONVERTIR_PUNTUACION:
     XOR A
     LD C,(IX+$00)
     LD B,(IX+$01)
     INC IX
     INC IX
-CODE_9A54:
+; --- BUCLE_RESTAR_DIVISOR (antes CODE_9A54): RESUELTA sesion 56. Resta
+; el divisor actual (BC) de HL repetidamente mientras no haya acarreo,
+; contando en A cuantas veces cupo -- ese conteo es el digito decimal
+; correspondiente a este divisor (division por resta repetida). ---
+BUCLE_RESTAR_DIVISOR:
     INC A
     SBC HL,BC
-    JR NC,CODE_9A54
+    JR NC,BUCLE_RESTAR_DIVISOR
     DEC A
-    CALL CODE_9A69
+    CALL ESCRIBIR_DIGITO_PUNTUACION
     ADD HL,BC
     LD A,B
     OR C
     CP $0A
-    JR NZ,CODE_9A49
+    JR NZ,BUCLE_CONVERTIR_PUNTUACION
     LD A,L
-    CALL CODE_9A69
+    CALL ESCRIBIR_DIGITO_PUNTUACION
     RET
-CODE_9A69:
+; --- ESCRIBIR_DIGITO_PUNTUACION (antes CODE_9A69): RESUELTA sesion 56.
+; Escribe un digito ya calculado (en A, valor binario 0-9) como caracter
+; ASCII ($30+digito) en la posicion actual del buffer (direccion en el
+; DE sombra + offset del DE primario), y avanza el offset (INC E) para
+; el siguiente digito. ---
+ESCRIBIR_DIGITO_PUNTUACION:
     PUSH HL
     EXX
     PUSH DE
@@ -6034,10 +6071,23 @@ ETIQUETA_PUNTUACION_MAXIMA:
     DB $42,$45,$53,$54,$49,$41,$FF        ; "BESTIA"
 ETIQUETA_PUNTUACION_DEMO:
     DB $20,$44,$45,$4D,$4F,$20,$FF        ; " DEMO "
-CODE_9A90:
+; --- DIBUJAR_CADENA_VRAM (antes CODE_9A90): RESUELTA sesion 56.
+; Hermana de ESCRIBIR_PATRON_VRAM pero para una cadena completa: IX
+; apunta a una secuencia de indices de patron de fuente terminada en
+; $FF (digitos ya convertidos, o las etiquetas fijas "BESTIA"/" DEMO "),
+; B/C = posicion de pantalla inicial (formato de CALCULAR_DIRECCION_
+; PANTALLA). Dibuja cada caracter y avanza la posicion de columna,
+; con el mismo manejo de salto de tercio de pantalla que el resto de
+; rutinas de dibujo de texto del motor. ---
+DIBUJAR_CADENA_VRAM:
     CALL CALCULAR_DIRECCION_PANTALLA
     EX DE,HL
-CODE_9A94:
+; --- BUCLE_DIBUJAR_CARACTER (antes CODE_9A94): RESUELTA sesion 56.
+; Bucle por caracter: lee el siguiente indice de IX (fin de cadena si
+; es $FF), y calcula la direccion del patron de fuente correspondiente
+; (misma formula base+A*8 que ESCRIBIR_PATRON_VRAM, TABLA_FUENTE_BASE
+; $9EFE + $9FFE por la resta de H en vez de suma explicita de DE). ---
+BUCLE_DIBUJAR_CARACTER:
     LD A,(IX+$00)
     INC IX
     CP $FF
@@ -6052,31 +6102,38 @@ CODE_9A94:
     LD BC,$9FFE
     ADD HL,BC
     LD B,$08
-CODE_9AAA:
+; --- BUCLE_COPIAR_FILA_DOBLE (antes CODE_9AAA): RESUELTA sesion 56.
+; Bucle por fila del patron (8 iteraciones): copia el byte de fuente y
+; lo escribe DOS VECES seguidas (duplicar la fila -- doble altura, 16
+; lineas de pixel por caracter en vez de 8), avanza el puntero de
+; fuente, y comprueba el cruce de tercio de pantalla (AND $06, mismo
+; chequeo estandar que en otras rutinas de dibujo de texto del motor,
+; adaptado a que D avanza de 2 en 2 por la duplicacion). Las 3
+; sub-etapas mecanicas (duplicar fila / avanzar fuente / iniciar
+; chequeo) no tienen salto entrante propio -- caida directa, sin
+; nombre individual. ---
+BUCLE_COPIAR_FILA_DOBLE:
     LD A,(HL)
     LD (DE),A
     INC D
-CODE_9AAD:
-    LD (DE),A
+    LD (DE),A                          ; duplica la fila (doble altura)
     INC D
-CODE_9AAF:
-    INC HL
+    INC HL                              ; avanza puntero de fuente
     LD A,D
-CODE_9AB1:
-    AND $06
-    JP NZ,CODE_9AC0
+    AND $06                             ; chequeo de cruce de tercio de pantalla
+    JP NZ,CONTINUAR_FILA_DOBLE
     LD A,E
     ADD A,$20
     LD E,A
-    JR C,CODE_9AC0
+    JR C,CONTINUAR_FILA_DOBLE
     LD A,D
     SUB $08
     LD D,A
-CODE_9AC0:
-    DJNZ CODE_9AAA
+CONTINUAR_FILA_DOBLE:
+    DJNZ BUCLE_COPIAR_FILA_DOBLE
     POP DE
     INC E
-    JR CODE_9A94
+    JR BUCLE_DIBUJAR_CARACTER
 ; --- LEER_ENTRADA: RESUELTA Y RENOMBRADA (sesion 26), mismo nombre
 ; EXACTO que en MSX (madmix1_body.asm, $8E3C, JT_LEER_ENTRADA) --
 ; coincidencia estructural muy fuerte, casi instruccion a instruccion:
@@ -6088,9 +6145,11 @@ CODE_9AC0:
 ;     equivalente MSX, sin analizar).
 ;   - Segun ($91B9) (candidato MODO_ENTRADA) despacha a distintas
 ;     tablas de teclas ($9B45/$9B72, y 2 destinos mas via
-;     CODE_9B51/CODE_9B7C) -- Spectrum distingue mas de 2 modos (CP $02
-;     con 3 ramas) frente al simple 0/no-0 de MSX, posible indicio de
-;     soporte para mas de un tipo de joystick ademas del teclado.
+;     LEER_JOYSTICK_SINCLAIR/LEER_JOYSTICK_KEMPSTON) -- Spectrum
+;     distingue mas de 2 modos (CP $02 con 3 ramas) frente al simple
+;     0/no-0 de MSX: CONFIRMADO en sesion 56 que es soporte de 2 tipos
+;     de joystick ademas del teclado (Sinclair Interface 2 emulado por
+;     teclado, y Kempston real via IN A,($1F)).
 ;   - ESCANEAR_FILAS_TECLADO (mas abajo) hace el mismo bucle de 5
 ;     lecturas con RL E que ESCANEAR_FILAS_TECLADO en MSX, y
 ;     COMPROBAR_PAUSA (mas abajo, SET 5,E -- MISMO numero de bit que
@@ -6105,37 +6164,59 @@ LEER_ENTRADA:
     BIT 0,(HL)
     RET NZ
     LD HL,$9B81                  ; ACUMULADOR_ENTRADA (candidato)
-CODE_9ACF:
+; AND A / JR NZ,DESPACHAR_MODO_ENTRADA (antes etiqueta CODE_9ACF, sin
+; salto entrante -- caida directa): decide si limpiar ACUMULADOR_ENTRADA
+; (A=0, parametro de LEER_ENTRADA, guardando antes su valor previo en
+; $9B83) o dejarlo acumular (A!=0).
     AND A
-    JR NZ,CODE_9AD8
+    JR NZ,DESPACHAR_MODO_ENTRADA
     LD A,(HL)
     LD ($9B83),A                 ; sin equivalente MSX identificado
     XOR A
     LD (HL),A
-CODE_9AD8:
+; --- DESPACHAR_MODO_ENTRADA (antes CODE_9AD8): RESUELTA sesion 56. Lee
+; MODO_ENTRADA ($91B9) y despacha segun su valor: 0 -> sigue a
+; CARGAR_TABLA_MODO_0, 1 -> LEER_JOYSTICK_SINCLAIR, 2 ->
+; LEER_JOYSTICK_KEMPSTON, 3 -> carga TABLA_TECLAS_MODO_3. ---
+DESPACHAR_MODO_ENTRADA:
     LD A,($91B9)                 ; MODO_ENTRADA (candidato)
     AND A
-    JR Z,CODE_9AED
+    JR Z,CARGAR_TABLA_MODO_0
     CP $02
-    JP C,CODE_9B51
-    JP Z,CODE_9B7C
+    JP C,LEER_JOYSTICK_SINCLAIR
+    JP Z,LEER_JOYSTICK_KEMPSTON
     LD IX,TABLA_TECLAS_MODO_3
-    JP CODE_9AF1
-CODE_9AED:
+    JP ESCANEAR_TABLA_TECLAS
+; --- CARGAR_TABLA_MODO_0 (antes CODE_9AED): RESUELTA sesion 56. Carga
+; TABLA_TECLAS_MODO_0 (esquema QAOP por defecto, MODO_ENTRADA=0) antes
+; de entrar al escaneo compartido. ---
+CARGAR_TABLA_MODO_0:
     LD IX,TABLA_TECLAS_MODO_0
-CODE_9AF1:
+; --- ESCANEAR_TABLA_TECLAS (antes CODE_9AF1): RESUELTA sesion 56.
+; Motor de escaneo compartido por los 3 modos basados en teclado (0, 1
+; y 3): resetea E=0, B=5 y entra al bucle de escaneo de fila
+; (ESCANEAR_FILAS_TECLADO), que cae en COMPROBAR_PAUSA como epilogo
+; comun (prueba pausa + anti-jitter + fusion en el acumulador). El
+; modo 2 (Kempston, ver LEER_JOYSTICK_KEMPSTON) no lo usa -- lee el
+; puerto directamente sin escanear teclado. ---
+ESCANEAR_TABLA_TECLAS:
     LD E,$00
     LD B,$05
 ESCANEAR_FILAS_TECLADO:
     CALL COMPROBAR_TECLA
-    JR NZ,CODE_9B00
+    JR NZ,TECLA_NO_PULSADA
     SCF
     RL E
-    JP CODE_9B03
-CODE_9B00:
+    JP CONTINUAR_ESCANEO_TECLADO
+; --- TECLA_NO_PULSADA (antes CODE_9B00): RESUELTA sesion 56. Camino
+; "tecla NO pulsada": mete un bit 0 en E (RL E con acarreo a 0). ---
+TECLA_NO_PULSADA:
     AND A
     RL E
-CODE_9B03:
+; --- CONTINUAR_ESCANEO_TECLADO (antes CODE_9B03): RESUELTA sesion 56.
+; Cola comun de ESCANEAR_FILAS_TECLADO: avanza el puntero de tabla
+; (INC IX x2) y repite el bucle. ---
+CONTINUAR_ESCANEO_TECLADO:
     INC IX
     INC IX
     DJNZ ESCANEAR_FILAS_TECLADO
@@ -6150,13 +6231,17 @@ CODE_9B03:
 COMPROBAR_PAUSA:
     LD IX,TABLA_TECLA_PAUSA
     CALL COMPROBAR_TECLA
-    JR NZ,CODE_9B14
+    JR NZ,RESOLVER_CONFLICTO_VERTICAL
     SET 5,E
-CODE_9B14:
+; --- RESOLVER_CONFLICTO_VERTICAL (antes CODE_9B14): RESUELTA sesion
+; 56. Si ABAJO+ARRIBA (bits 2-3, mascara $0C) estan a 1 a la vez, los
+; sustituye por los del acumulador anterior ($9B83) -- anti-jitter del
+; eje vertical. ---
+RESOLVER_CONFLICTO_VERTICAL:
     LD A,E
     AND $0C
     CP $0C
-    JR NZ,CODE_9B26
+    JR NZ,RESOLVER_CONFLICTO_HORIZONTAL
     LD A,E
     AND $13
     LD E,A
@@ -6164,11 +6249,14 @@ CODE_9B14:
     AND $0C
     OR E
     LD E,A
-CODE_9B26:
+; --- RESOLVER_CONFLICTO_HORIZONTAL (antes CODE_9B26): RESUELTA sesion
+; 56. Mismo mecanismo que RESOLVER_CONFLICTO_VERTICAL mas arriba, para
+; DERECHA+IZQUIERDA (bits 0-1, mascara $03). ---
+RESOLVER_CONFLICTO_HORIZONTAL:
     LD A,E
     AND $03
     CP $03
-    JR NZ,CODE_9B38
+    JR NZ,FUNDIR_ACUMULADOR_ENTRADA
     LD A,E
     AND $1C
     LD E,A
@@ -6176,7 +6264,10 @@ CODE_9B26:
     AND $03
     OR E
     LD E,A
-CODE_9B38:
+; --- FUNDIR_ACUMULADOR_ENTRADA (antes CODE_9B38): RESUELTA sesion 56.
+; Paso final de COMPROBAR_PAUSA: funde (OR) el resultado con
+; ACUMULADOR_ENTRADA (HL, heredado de LEER_ENTRADA) y lo guarda. ---
+FUNDIR_ACUMULADOR_ENTRADA:
     LD A,E
     OR (HL)
     LD (HL),A
@@ -6209,12 +6300,28 @@ TABLA_TECLAS_MODO_0:
     DB $DF,$01                   ; P -> DERECHA
 TABLA_TECLA_PAUSA:
     DB $BF,$10                   ; H (pausa)
-CODE_9B51:
+; --- LEER_JOYSTICK_SINCLAIR (antes CODE_9B51): RESUELTA sesion 56.
+; Modo 1: emulacion de joystick Sinclair Interface 2 via teclado --
+; escanea TABLA_TECLAS_MODO_1A (puerto derecho) via ESCANEAR_TABLA_
+; TECLAS (con CALL, para volver aqui), luego TABLA_TECLAS_MODO_1B
+; (puerto izquierdo) con JR (definitivo, el RET final de COMPROBAR_PAUSA
+; devuelve al llamador original de LEER_ENTRADA). Ambas lecturas se
+; funden (OR) en COMPROBAR_PAUSA -- ambos puertos Sinclair activan las
+; mismas 4 direcciones. ---
+LEER_JOYSTICK_SINCLAIR:
     LD IX,TABLA_TECLAS_MODO_1A
-    CALL CODE_9AF1
-CODE_9B58:
+    CALL ESCANEAR_TABLA_TECLAS
+; --- LEER_JOYSTICK_SINCLAIR_PUERTO_IZQUIERDO (antes CODE_9B58):
+; RESUELTA sesion 56. No es destino de ningun JR/JP explicito -- es la
+; direccion de retorno del CALL ESCANEAR_TABLA_TECLAS de encima (tras
+; escanear el puerto DERECHO Sinclair y volver aqui). Segunda mitad de
+; LEER_JOYSTICK_SINCLAIR: escanea TABLA_TECLAS_MODO_1B (puerto
+; IZQUIERDO, teclas 0,9,8,7,6) con JR (definitivo esta vez, el RET
+; final de COMPROBAR_PAUSA devuelve al llamador original de
+; LEER_ENTRADA). ---
+LEER_JOYSTICK_SINCLAIR_PUERTO_IZQUIERDO:
     LD IX,TABLA_TECLAS_MODO_1B
-    JR CODE_9AF1
+    JR ESCANEAR_TABLA_TECLAS
 ; TABLA_TECLAS_MODO_1A/1B ($9B5E/$9B68, sesion 45): "modo 1"
 ; (MODO_ENTRADA=1) -- emulacion de joystick Sinclair Interface 2 via
 ; teclado: fila numerica 1-5 (puerto derecho) y 0,9,8,7,6 (puerto
@@ -6242,7 +6349,14 @@ TABLA_TECLAS_MODO_3:
     DB $EF,$10                   ; 6 -> ABAJO
     DB $F7,$10                   ; 5 -> IZQUIERDA
     DB $EF,$04                   ; 8 -> DERECHA
-CODE_9B7C:
+; --- LEER_JOYSTICK_KEMPSTON (antes CODE_9B7C): RESUELTA sesion 56.
+; Modo 2: joystick Kempston por hardware -- lee el puerto $1F
+; directamente (puerto ESTANDAR Kempston) y mete el byte tal cual en
+; E, sin pasar por ESCANEAR_TABLA_TECLAS. El formato Kempston
+; (bit0=derecha,bit1=izquierda,bit2=abajo,bit3=arriba) coincide con el
+; bit layout QAOP ya establecido para E, de ahi que no haga falta
+; reordenar bits antes de saltar a COMPROBAR_PAUSA. ---
+LEER_JOYSTICK_KEMPSTON:
     IN A,($1F)
     LD E,A
     JR COMPROBAR_PAUSA
@@ -6302,7 +6416,7 @@ TABLA_TIPOS_LOSETA:
 ;     con el VDP como disparador -- de ahi que incluso el NOMBRE
 ;     difiera, ver esa rutina).
 ;   - Espera pulsacion de tecla antes de continuar (aqui: bucle
-;     CODE_9BEA leyendo el puerto $FE directo; MSX tuvo que adaptarlo
+;     ESPERAR_TECLA_INICIO leyendo el puerto $FE directo; MSX tuvo que adaptarlo
 ;     a COMPROBAR_PULSACION, un escaneo de matriz de teclado via PSG,
 ;     al no tener un puerto de teclado tan directo como la ULA) --
 ;     misma idea, mecanismo MSX adaptado.
@@ -6311,7 +6425,7 @@ TABLA_TIPOS_LOSETA:
 ;     orden y VALOR con las que fija INICIO de MSX en REINICIAR_PARTIDA
 ;     (VIDAS_RESTANTES=3, HL=0->PUNTUACION, NIVEL_ACTUAL=1, CONTADOR_VUELTAS_NIVELES=0) frente a MSX
 ;     (VIDAS_RESTANTES=3, PUNTUACION=0, NIVEL_ACTUAL=1,
-;     CONTADOR_VUELTAS_NIVELES=0) -- ver comentario junto a CODE_9C07
+;     CONTADOR_VUELTAS_NIVELES=0) -- ver comentario junto a REINICIAR_PARTIDA
 ;     mas abajo. Coincidencia demasiado exacta (4 variables, mismo
 ;     orden, mismos valores) para ser casualidad.
 ;
@@ -6329,7 +6443,11 @@ INICIO:
     DI
     CALL ACTIVAR_INTERRUPCION_MODO_2
     DI
-CODE_9BEA:
+; --- ESPERAR_TECLA_INICIO (antes CODE_9BEA): RESUELTA sesion 56.
+; Bucle de espera de tecla al arrancar el juego, con la musica de
+; presentacion sonando de fondo (equivalente Spectrum de
+; COMPROBAR_PULSACION en MSX, ver cabecera de INICIO mas arriba). ---
+ESPERAR_TECLA_INICIO:
     LD HL,$DFB7                 ; guion de canal A (melodia) -- candidato: musica de presentacion/espera
     LD ($E212),HL               ; PUNTERO_CANAL_A (operando automodificable, ver REPRODUCIR_SONIDO)
     LD HL,$DFCA                 ; guion de canal B (percusion), misma melodia
@@ -6347,7 +6465,7 @@ CODE_9BEA:
                                 ; Spectrum de COMPROBAR_PULSACION en MSX)
     CPL
     AND $1F                     ; media fila de teclado (5 teclas)
-    JR Z,CODE_9BEA               ; sin tecla -> repite (bucle de espera)
+    JR Z,ESPERAR_TECLA_INICIO               ; sin tecla -> repite (bucle de espera)
     CALL CARGAR_MARCO_DECORATIVO               ; HIPOTESIS: limpia pantalla + relleno
                                 ; RLE de bitmap (ver su propio analisis)
     CALL PREPARAR_TABLA_ESQUEMA_COLOR               ; RESUELTA sesion 56 (ver
@@ -6355,7 +6473,9 @@ CODE_9BEA:
                                 ; reutiliza la memoria de BITMAP_MARCO_DECORATIVO,
                                 ; ya consumida por CARGAR_MARCO_DECORATIVO justo
                                 ; arriba, como tabla de trabajo para el HUD.
-; --- CODE_9C07: reentrada real de INICIO (igual que MSX tiene 2
+; --- REINICIAR_PARTIDA (antes CODE_9C07): RESUELTA sesion 56, mismo
+; nombre EXACTO que MSX por la correspondencia ya confirmada abajo.
+; Reentrada real de INICIO (igual que MSX tiene 2
 ; puntos de reentrada, REINICIAR_PARTIDA y PANTALLA_PRESENTACION_NIVEL).
 ; Este bloque inicializa 4 variables de estado de partida que
 ; coinciden EXACTAS en cantidad, orden y valor con las que fija
@@ -6364,7 +6484,7 @@ CODE_9BEA:
 ; VIDAS_RESTANTES/PUNTUACION siguen como hipotesis fuerte por la misma
 ; correspondencia. Las 4 ya son etiquetas reales desde sesion 25 (ver
 ; la zona de variables tras MOTOR_INICIO). ---
-CODE_9C07:
+REINICIAR_PARTIDA:
     CALL LEER_TECLA_MENU         ; CORREGIDO sesion 54: NO es VACIAR_CANALES_SONIDO
                                 ; (hipotesis de sesion 22/40 descartada, ver
                                 ; FINDINGS.md) -- es el segundo punto de entrada
@@ -6380,99 +6500,130 @@ CODE_9C07:
     XOR A                        ; CONTADOR_VUELTAS_NIVELES (CONFIRMADO sesion 24)
     LD (CONTADOR_VUELTAS_NIVELES),A
     SCF                          ; carry=1 (posible flag "partida nueva")
-    JR CODE_9C22
-CODE_9C21:
+    JR PREPARAR_INICIO_NIVEL
+; --- PANTALLA_PRESENTACION_NIVEL (antes CODE_9C21): RESUELTA sesion
+; 56, mismo nombre EXACTO que MSX -- la otra mitad del patron de doble
+; entrada (reentrada "nivel siguiente", sin resetear vidas/puntuacion,
+; frente a REINICIAR_PARTIDA arriba que si las resetea). ---
+PANTALLA_PRESENTACION_NIVEL:
     AND A                        ; carry=0 (posible flag "reentrada de nivel") --
                                 ; mismo patron de doble entrada que
                                 ; REINICIAR_PARTIDA/PANTALLA_PRESENTACION_NIVEL en MSX
-; --- CODE_9C22: RESUELTA EN BUENA PARTE (sesion 23) -- las 3 llamadas
-; a DIBUJAR_TEXTO_VRAM que siguen (ahora confirmada como equivalente
-; exacto de la rutina homonima de MSX, ver arriba) encajan letra por
-; letra con lo que dice MSX de su bloque equivalente: "Dibuja 3 lineas
-; de texto de HUD/pantalla segun el nivel actual y dos flags del
-; registro de nivel" (comentario de INICIO en madmix1_body.asm):
-;   1. Copia 2 bytes de una tabla indexada por nivel ($9E1E + nivel*2)
-;      a $9E1C -- puntero/registro de nivel actual, como el "registro
-;      de nivel" que consulta MSX -- y dibuja el texto de $484C.
-;   2. Si viene de "partida nueva" (SCF en CODE_9C07/CODE_9C21), espera
+; --- PREPARAR_INICIO_NIVEL (antes CODE_9C22): RESUELTA POR COMPLETO
+; (sesion 23, datos confirmados sesion 56 continuacion 23) -- las 3
+; llamadas a DIBUJAR_TEXTO_VRAM que siguen (equivalente exacto de la
+; rutina homonima de MSX, ver arriba) encajan letra por letra con lo
+; que dice MSX de su bloque equivalente: "Dibuja 3 lineas de texto de
+; HUD/pantalla segun el nivel actual y dos flags del registro de
+; nivel" (comentario de INICIO en madmix1_body.asm):
+;   1. Copia 2 bytes de TABLA_NUMEROS_NIVEL (indexada por nivel*2) al
+;      "00" final de TEXTO_FASE (offset+8), y dibuja TEXTO_FASE
+;      (" FASE 00") en $484C.
+;   2. Si viene de "partida nueva" (SCF en REINICIAR_PARTIDA/PANTALLA_PRESENTACION_NIVEL), espera
 ;      50 frames (~1s) y llama a REPRODUCIR_SONIDO otra vez (motor de
 ;      sonido, RESUELTO sesion 55, ver ISR_SONIDO).
 ;   3. Si el flag en $603E esta activo, suma su valor a VIDAS_RESTANTES
-;      (candidato VIDAS_RESTANTES) topando en 5, y dibuja el texto de
-;      $48CE -- muy probablemente el mensaje de "vida extra".
-;   4. Si $600E=1 y VIDAS_RESTANTES(vidas)<4, dibuja el texto de $5045 -- otro
-;      mensaje condicional (candidato a aviso de "ultima vida" o
-;      similar).
+;      (candidato VIDAS_RESTANTES) topando en 5, y dibuja TEXTO_EXTRA
+;      ("EXTRA") en $48CE.
+;   4. Si $600E=1 y VIDAS_RESTANTES(vidas)<4, dibuja TEXTO_VIDA_EXTRA
+;      ("EN LA PROXIMA... EXTRA") en $5045 -- pese al nombre historico
+;      de la rutina que lo dispara (COMPROBAR_AVISO_ULTIMA_VIDA), el
+;      contenido real confirma que anuncia la PROXIMA vida extra, no
+;      un aviso de ultima vida (ver hallazgo continuacion 18).
 ; Termina esperando 80 frames (~1.6s) -- tiempo de lectura del HUD
 ; antes de continuar. Encaja con PREPARAR_INICIO_NIVEL de MSX (la
 ; secuencia "nivel cargado -> HUD -> esperar" de las transiciones,
-; NO el bucle de cada frame). CODE_9C93 (mas abajo) es candidato a
+; NO el bucle de cada frame). REINICIAR_ESTADO_NIVEL (mas abajo) es candidato a
 ; ser el resto de esa misma secuencia (llama a REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM dos veces,
 ; separadas por APLICAR_ATRIBUTOS_MARCO_COMPLETO -- el relleno RLE de atributos visto en
 ; sesion 22, candidato a APLICAR_COLOR_PANTALLA) -- sin analizar
 ; todavia mas alla de aqui. ---
-CODE_9C22:
+PREPARAR_INICIO_NIVEL:
     PUSH AF
     CALL CARGAR_NIVEL               ; RESUELTA sesion 24 -- carga el registro
                                 ; de 20 bytes del nivel actual y decodifica
                                 ; su matriz a $FC60 (ver su propio analisis)
     LD A,(NIVEL_ACTUAL)                 ; NIVEL_ACTUAL (CONFIRMADO sesion 24)
     ADD A,A
-    LD HL,$9E1E                 ; tabla indexada por nivel*2
+    LD HL,TABLA_NUMEROS_NIVEL
     ADD A,L
     LD L,A
     LD A,H
     ADC A,$00
     LD H,A
-    LD DE,$9E1C                 ; "registro de nivel" (HIPOTESIS)
+    LD DE,TEXTO_FASE+8            ; el "00" final de " FASE 00"
     LDI
     LDI
     LD HL,$484C                 ; texto HUD 1/3
-    LD DE,$9E14
+    LD DE,TEXTO_FASE
     CALL DIBUJAR_TEXTO_VRAM
     POP AF
-    JR NC,CODE_9C5B
+    JR NC,COMPROBAR_VIDA_EXTRA
     EI
     LD B,$32                     ; 50 frames (~1s)
-CODE_9C49:
+; --- BUCLE_ESPERA_PARTIDA_NUEVA (antes CODE_9C49): RESUELTA sesion
+; 56. Espera 50 frames (~1s), solo en el camino "partida nueva" (carry
+; de REINICIAR_PARTIDA), antes de repetir la musica de presentacion. ---
+BUCLE_ESPERA_PARTIDA_NUEVA:
     HALT
-    DJNZ CODE_9C49
+    DJNZ BUCLE_ESPERA_PARTIDA_NUEVA
     LD HL,$DFB7
     LD ($E212),HL
     LD HL,$DFCA
     LD ($E216),HL
     CALL REPRODUCIR_SONIDO        ; motor de sonido, RESUELTO sesion 55
-CODE_9C5B:
+; --- COMPROBAR_VIDA_EXTRA (antes CODE_9C5B): RESUELTA sesion 56.
+; Comprueba el flag $603E (bonus de vida extra pendiente); si esta
+; activo, suma su valor a VIDAS_RESTANTES (topando en 5) y dibuja
+; TEXTO_EXTRA ("EXTRA"). ---
+COMPROBAR_VIDA_EXTRA:
     LD HL,$603E
     LD A,(HL)
     LD (HL),$00
     AND A
-    JR Z,CODE_9C76
+    JR Z,COMPROBAR_AVISO_ULTIMA_VIDA
     LD HL,VIDAS_RESTANTES                 ; HIPOTESIS VIDAS_RESTANTES
     ADD A,(HL)
     CP $05
-    JR NC,CODE_9C76
+    JR NC,COMPROBAR_AVISO_ULTIMA_VIDA
     LD (HL),A
-    LD HL,$48CE                 ; texto HUD 2/3 -- candidato "vida extra"
-    LD DE,$9E56
+    LD HL,$48CE                 ; texto HUD 2/3
+    LD DE,TEXTO_EXTRA
     CALL DIBUJAR_TEXTO_VRAM
-CODE_9C76:
+; --- COMPROBAR_AVISO_ULTIMA_VIDA (antes CODE_9C76): RESUELTA sesion
+; 56. Comprueba el flag $600E; si esta activo y quedan menos de 4
+; vidas, dibuja TEXTO_VIDA_EXTRA ("EN LA PROXIMA... EXTRA") -- pese al
+; nombre historico de esta rutina, el contenido real confirma que
+; anuncia la PROXIMA vida extra, no un aviso de ultima vida (ver
+; hallazgo continuacion 18). ---
+COMPROBAR_AVISO_ULTIMA_VIDA:
     LD A,($600E)
     CP $01
-    JR NZ,CODE_9C8D
+    JR NZ,CONTINUAR_TRAS_AVISOS_HUD
     LD A,(VIDAS_RESTANTES)                 ; HIPOTESIS VIDAS_RESTANTES
     CP $04
-    JR NC,CODE_9C8D
-    LD HL,$5045                 ; texto HUD 3/3 -- candidato aviso final
-    LD DE,$9E3E
+    JR NC,CONTINUAR_TRAS_AVISOS_HUD
+    LD HL,$5045                 ; texto HUD 3/3
+    LD DE,TEXTO_VIDA_EXTRA
     CALL DIBUJAR_TEXTO_VRAM
-CODE_9C8D:
+; --- CONTINUAR_TRAS_AVISOS_HUD (antes CODE_9C8D): RESUELTA sesion 56.
+; Convergencia tras los 2 avisos condicionales de arriba, antes de
+; esperar el tiempo de lectura del HUD. ---
+CONTINUAR_TRAS_AVISOS_HUD:
     EI
     LD B,$50                     ; 80 frames (~1.6s) -- tiempo de lectura del HUD
-CODE_9C90:
+; --- BUCLE_ESPERA_LECTURA_HUD (antes CODE_9C90): RESUELTA sesion 56.
+; Espera 80 frames (~1.6s), tiempo de lectura del HUD antes de
+; continuar a REINICIAR_ESTADO_NIVEL. ---
+BUCLE_ESPERA_LECTURA_HUD:
     HALT
-    DJNZ CODE_9C90
-CODE_9C93:
+    DJNZ BUCLE_ESPERA_LECTURA_HUD
+; --- REINICIAR_ESTADO_NIVEL (antes CODE_9C93): RESUELTA sesion 56.
+; Reinicia selector de sprite/direccion/temporizadores, redibuja la
+; pantalla completa y busca la columna del HUD (BUSCAR_COLUMNA_HUD, mas
+; abajo). Tambien es la reentrada "quedan vidas" desde
+; BUCLE_PRINCIPAL_JUEGO tras perder una. ---
+REINICIAR_ESTADO_NIVEL:
     CALL INICIALIZAR_ITEMS_NIVEL
     CALL REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM
     CALL APLICAR_ATRIBUTOS_MARCO_COMPLETO               ; relleno RLE de atributos (sesion 22,
@@ -6480,9 +6631,13 @@ CODE_9C93:
     LD A,(MODO_ESPECIAL)
     CP $03
     LD A,$0E
-    JR Z,CODE_9CA6
+    JR Z,GUARDAR_SELECTOR_SPRITE_INICIAL
     XOR A
-CODE_9CA6:
+; --- GUARDAR_SELECTOR_SPRITE_INICIAL (antes CODE_9CA6): RESUELTA
+; sesion 56. Convergencia de las 2 ramas de arriba (A=$0E si
+; MODO_ESPECIAL=3, si no A=0) antes de guardar el selector de sprite
+; inicial del comecocos. ---
+GUARDAR_SELECTOR_SPRITE_INICIAL:
     LD (SELECTOR_SPRITE_COMECOCOS),A
     XOR A
     LD (DIRECCION_DE_MOVIMIENTO),A
@@ -6492,12 +6647,19 @@ CODE_9CA6:
     CALL REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM
     LD A,$01
     LD (FLAG_ENTRADA_BLOQUEADA),A
-    LD HL,$9E01
-    LD A,($9E13)
+    LD HL,TABLA_POSICIONES_HUD
+    LD A,(TABLA_POSICIONES_HUD+18)
     LD (COLOR_ACTUAL),A
-    LD A,($9E12)
+    LD A,(TABLA_POSICIONES_HUD+17)
     LD C,A
-CODE_9CCB:
+; --- BUSCAR_COLUMNA_HUD (antes CODE_9CCB): RESUELTA sesion 56, mismo
+; nombre EXACTO que MSX (equivalente confirmado: MSX describe esta
+; misma fase como "animacion de busqueda del HUD", ver comentario de
+; INICIO mas arriba). Bucle que llama a ENTRADA_MOTOR_MOVIMIENTO_COLISION
+; y espera VBLANK en cada vuelta hasta que C (icono buscado, AND $78)
+; coincide con el byte leido -- animacion de "recorrer" el HUD hasta
+; encontrar la columna correcta. ---
+BUSCAR_COLUMNA_HUD:
     PUSH BC
     PUSH HL
     CALL ENTRADA_MOTOR_MOVIMIENTO_COLISION
@@ -6511,25 +6673,25 @@ CODE_9CCB:
     PUSH AF
     CALL WAIT_VBLANK
     POP AF
-    LD ($9E10),HL
+    LD (TABLA_POSICIONES_HUD+15),HL
     INC HL
-    JR NZ,CODE_9CCB
+    JR NZ,BUSCAR_COLUMNA_HUD
     XOR A
     LD (FLAG_ENTRADA_BLOQUEADA),A
     LD A,C
     AND $48
     XOR $5F
-    LD (CODE_9E5E),A
-    LD ($9E6A),A
-    LD ($9E76),A
+    LD (TEXTO_VACIO_1+1),A         ; atributo de TEXTO_VACIO_1 (idem MSX, offset+1 del registro)
+    LD (TEXTO_READY+1),A           ; atributo de TEXTO_READY -- las 3 comparten el mismo color
+    LD (TEXTO_VACIO_2+1),A         ; atributo de TEXTO_VACIO_2
     LD HL,$488C
-    LD DE,CODE_9E5D
+    LD DE,TEXTO_VACIO_1
     CALL DIBUJAR_TEXTO_VRAM
     LD HL,$48AC
-    LD DE,CODE_9E69
+    LD DE,TEXTO_READY
     CALL DIBUJAR_TEXTO_VRAM
     LD HL,$48CC
-    LD DE,$9E75
+    LD DE,TEXTO_VACIO_2
     CALL DIBUJAR_TEXTO_VRAM
     LD HL,$E007                   ; guion de canal A -- candidato: musica de inicio de nivel
     LD ($E212),HL
@@ -6566,13 +6728,13 @@ BUCLE_PRINCIPAL_JUEGO:
     LD HL,MODO_ESPECIAL_ACTIVO
     LD A,(HL)
     CP $02
-    JR NZ,CODE_9D3E
+    JR NZ,COMPROBAR_TEMPORIZADOR_MODO_ESPECIAL
     LD DE,COLOR_ACTUAL
     LD A,(DE)
     LD (COLOR_GUARDADO),A
     LD A,(REGISTRO_NIVEL_ICONO_HUD)
     LD (DE),A
-CODE_9D3E:
+COMPROBAR_TEMPORIZADOR_MODO_ESPECIAL:
     AND A
     JR Z,VERIFICAR_FIN_NIVEL
     DEC (HL)
@@ -6584,7 +6746,7 @@ CODE_9D3E:
     LD HL,$E01C                   ; guion de canal B
     LD ($E216),HL
     CALL REPRODUCIR_SONIDO        ; motor de sonido, RESUELTO sesion 55
-    CALL CODE_9DE1
+    CALL DESTELLO_ICONO_COLOR_HUD
     LD HL,(REGISTRO_NIVEL_POSICION_COMECOCOS)
     LD A,L
     AND $FC
@@ -6595,22 +6757,22 @@ CODE_9D3E:
     ADD A,(HL)
     LD (HL),A
     CP $FF
-    JP C,CODE_9C93
+    JP C,REINICIAR_ESTADO_NIVEL
     CALL LIMPIAR_PANTALLA_MENU    ; reutilizada aqui fuera del menu de
                                     ; controles como limpiador de pantalla
                                     ; generico (sesion 54)
     CALL WAIT_VBLANK
     LD HL,$484B
-    LD DE,CODE_9E81
+    LD DE,TEXTO_GAME_OVER
     CALL DIBUJAR_TEXTO_VRAM
     EI
     LD B,$96
-CODE_9D85:
+BUCLE_ESPERA_GAME_OVER:
     HALT
-    DJNZ CODE_9D85
-    JP CODE_9C07
+    DJNZ BUCLE_ESPERA_GAME_OVER
+    JP REINICIAR_PARTIDA
 VERIFICAR_FIN_NIVEL:
-    CALL CODE_9DD1
+    CALL ACTUALIZAR_PARPADEO_BOLA
     LD HL,(CONTADOR_BOLAS_COMIDAS)
     LD DE,($6019)
     AND A
@@ -6620,34 +6782,34 @@ VERIFICAR_FIN_NIVEL:
     INC (HL)
     LD A,(HL)
     CP $10
-    JR NZ,CODE_9DAC
+    JR NZ,PREPARAR_TRANSICION_NIVEL
     LD (HL),$01
     LD A,(CONTADOR_VUELTAS_NIVELES)
     INC A
     LD (CONTADOR_VUELTAS_NIVELES),A
-CODE_9DAC:
-    CALL CODE_9DE1
+PREPARAR_TRANSICION_NIVEL:
+    CALL DESTELLO_ICONO_COLOR_HUD
     LD A,($600E)
     LD ($603E),A
-    JP CODE_9C21
+    JP PANTALLA_PRESENTACION_NIVEL
 VERIFICAR_ENTRADA:
     XOR A
     CALL LEER_ENTRADA
     BIT 5,A
-    JR Z,CODE_9DCE
+    JR Z,CONTINUAR_BUCLE_PRINCIPAL
     EI
     LD B,$32
-CODE_9DC3:
+BUCLE_ESPERA_PAUSA:
     HALT
-    DJNZ CODE_9DC3
-CODE_9DC6:
+    DJNZ BUCLE_ESPERA_PAUSA
+ESPERAR_TECLA_REANUDAR:
     XOR A
     CALL LEER_ENTRADA
     AND $3F
-    JR Z,CODE_9DC6
-CODE_9DCE:
+    JR Z,ESPERAR_TECLA_REANUDAR
+CONTINUAR_BUCLE_PRINCIPAL:
     JP BUCLE_PRINCIPAL_JUEGO
-CODE_9DD1:
+ACTUALIZAR_PARPADEO_BOLA:
     LD HL,TEMPORIZADOR_PARPADEO_BOLA
     INC (HL)
     LD A,(HL)
@@ -6658,11 +6820,19 @@ CODE_9DD1:
     LD HL,(POSICION_PARPADEO_BOLA)
     LD (HL),A
     RET
-CODE_9DE1:
+; --- DESTELLO_ICONO_COLOR_HUD (antes REPINTAR_ICONOS_HUD, sesion 56
+; continuacion 22): mismo nombre EXACTO que MSX (madmix1_body.asm
+; $9116, IDENTICA instruccion a instruccion, incluidas las mismas
+; variables REGISTRO_NIVEL_ICONO_HUD/COLOR_ACTUAL/WAIT_VBLANK) --
+; CORREGIDO (correccion heredada de MSX): NO es un "repintado", es un
+; PARPADEO/DESTELLO rapido de icono+color mientras recorre hacia atras
+; (DEC HL) TABLA_POSICIONES_HUD desde donde la dejo BUSCAR_COLUMNA_HUD
+; (TABLA_POSICIONES_HUD+15), hasta el centinela $00 de fin de tabla. ---
+DESTELLO_ICONO_COLOR_HUD:
     LD A,(COLOR_ACTUAL)
-    LD ($9E13),A
-    LD HL,($9E10)
-CODE_9DEA:
+    LD (TABLA_POSICIONES_HUD+18),A
+    LD HL,(TABLA_POSICIONES_HUD+15)
+BUCLE_DESTELLO_ICONO_COLOR_HUD:
     PUSH BC
     PUSH HL
     POP HL
@@ -6675,127 +6845,66 @@ CODE_9DEA:
     CALL WAIT_VBLANK
     POP AF
     DEC HL
-    JP NZ,CODE_9DEA
+    JP NZ,BUCLE_DESTELLO_ICONO_COLOR_HUD
     RET
     NOP
-    EX AF,AF'
-    LD C,B
-    DJNZ CODE_9E55
-    JR CODE_9E5F
-    JR NZ,CODE_9E69
-    JR Z,CODE_9E73
-    JR NC,CODE_9E7D
-    JR C,CODE_9E87
-    LD B,B
-    NOP
-    NOP
-    NOP
-    NOP
-    EX AF,AF'
-    LD B,(HL)
-    JR NZ,CODE_9E5E
-    LD B,C
-    LD D,E
-    LD B,L
-    JR NZ,CODE_9E4D
-    JR NC,CODE_9E3F
-    JR NC,CODE_9E41
-    LD SP,$3220
-    JR NZ,CODE_9E59
-    JR NZ,CODE_9E5C
-    JR NZ,CODE_9E5F
-    JR NZ,$9E62
-    JR NZ,CODE_9E65
-    JR NZ,$9E68
-    JR NZ,CODE_9E6B
-    LD SP,$3130
-    LD SP,$3231
-    LD SP,$3133
-    INC (HL)
-    LD SP,$1635
-CODE_9E3F:
-    LD B,A
-    LD B,L
-CODE_9E41:
-    LD C,(HL)
-    JR NZ,CODE_9E90
-    LD B,C
-    JR NZ,$9E97
-    LD D,D
-    LD C,A
-    LD E,B
-    LD C,C
-    LD C,L
-    LD B,C
-CODE_9E4D:
-    LD L,$2E
-    LD L,$20
-CODE_9E51:
-    LD B,L
-    LD E,B
-    LD D,H
-    LD D,D
-CODE_9E55:
-    LD B,C
-    DEC B
-    LD B,D
-    LD B,L
-CODE_9E59:
-    LD E,B
-    LD D,H
-    LD D,D
-CODE_9E5C:
-    LD B,C
-CODE_9E5D:
-    LD A,(BC)
-CODE_9E5E:
-    NOP
-CODE_9E5F:
-    JR NZ,CODE_9E81
-    JR NZ,CODE_9E83
-    JR NZ,CODE_9E85
-CODE_9E65:
-    JR NZ,CODE_9E87
-    JR NZ,$9E89
-CODE_9E69:
-    LD A,(BC)
-    NOP
-CODE_9E6B:
-    JR NZ,CODE_9E8D
-    LD D,D
-    LD B,L
-    LD B,C
-    LD B,H
-    LD E,C
-    CCF
-CODE_9E73:
-    JR NZ,$9E95
-    LD A,(BC)
-    NOP
-    JR NZ,$9E99
-CODE_9E79:
-    JR NZ,CODE_9E9B
-    JR NZ,CODE_9E9D
-CODE_9E7D:
-    JR NZ,CODE_9E9F
-    JR NZ,CODE_9EA1
-CODE_9E81:
-    DEC BC
-    LD B,D
-CODE_9E83:
-    LD B,L
-    LD D,E
-CODE_9E85:
-    LD D,H
-    LD B,C
-CODE_9E87:
-    LD D,E
-    JR NZ,CODE_9ED0
-    LD D,D
-    LD C,C
-    LD D,H
-CODE_9E8D:
-    LD C,A
+; --- TABLA_POSICIONES_HUD (sesion 56 continuacion 22): mismo nombre
+; EXACTO que MSX, confirmado byte a byte (08 48 10 50 18 58 20 60 28
+; 68 30 70 38 78 40 00 00 00 00 -- identicos). +15 (word) = puntero de
+; busqueda guardado por BUSCAR_COLUMNA_HUD; +17 = columna/icono
+; objetivo; +18 = COLOR_ACTUAL guardado -- ambos consumidos por
+; DESTELLO_ICONO_COLOR_HUD. Sigue como datos disfrazados de codigo
+; (ver cabecera $9E01-$9E8D mas abajo), solo se etiqueta el inicio. ---
+TABLA_POSICIONES_HUD:
+    DB $08,$48, $10,$50, $18,$58, $20,$60
+    DB $28,$68, $30,$70, $38,$78, $40
+    DB $00,$00,$00,$00      ; offsets 15-18: puntero de busqueda (word,
+                            ; +15) + columna objetivo (+17) + color
+                            ; guardado (+18), relleno en tiempo real --
+                            ; ver cabecera de arriba
+; --- TEXTO_FASE (sesion 56 continuacion 23, dato real -- antes parte
+; del tramo "datos disfrazados de codigo"): mismo nombre EXACTO que
+; MSX. Plantilla del indicador de nivel " FASE 00" -- el "00" final se
+; sobreescribe en tiempo real con 2 bytes de TABLA_NUMEROS_NIVEL
+; (indexada por NIVEL_ACTUAL*2, ver PREPARAR_INICIO_NIVEL) antes de
+; dibujarse via DIBUJAR_TEXTO_VRAM. ---
+TEXTO_FASE:
+    DB $08,$46," FASE 00"
+; --- TABLA_NUMEROS_NIVEL (sesion 56 continuacion 23, dato real): mismo
+; nombre EXACTO que MSX -- 32 bytes (16 pares "espacio+digito"),
+; indexada por NIVEL_ACTUAL*2 para obtener los 2 caracteres que
+; sustituyen el "00" final de TEXTO_FASE. ---
+TABLA_NUMEROS_NIVEL:
+    DB " 0 1 2 3 4 5 6 7 8 9101112131415"
+; --- TEXTO_VIDA_EXTRA (sesion 56 continuacion 23, dato real): mismo
+; nombre EXACTO que MSX -- dibujado por COMPROBAR_AVISO_ULTIMA_VIDA
+; (flag $600E; pese al nombre historico de esa rutina, el contenido real
+; confirma que anuncia la PROXIMA vida extra, no un aviso de ultima
+; vida -- ver hallazgo continuacion 18). ---
+TEXTO_VIDA_EXTRA:
+    DB $16,$47,"EN LA PROXIMA... EXTRA"
+; --- TEXTO_EXTRA (sesion 56 continuacion 23, dato real): mismo nombre
+; EXACTO que MSX -- dibujado por COMPROBAR_VIDA_EXTRA (flag $603E). ---
+TEXTO_EXTRA:
+    DB $05,$42,"EXTRA"
+; --- TEXTO_VACIO_1/TEXTO_READY/TEXTO_VACIO_2 (nombradas continuacion
+; 18, convertidas a dato real aqui continuacion 23): mismos nombres
+; EXACTOS que MSX -- trio blanco/READY?/blanco dibujado por
+; BUSCAR_COLUMNA_HUD/REINICIAR_ESTADO_NIVEL tras cargar cada nivel. El
+; atributo (offset+1 de cada registro) se sobreescribe en tiempo real
+; con el color derivado de la columna de camara (ver esas rutinas). ---
+TEXTO_VACIO_1:
+    DB $0A,$00,"          "
+TEXTO_READY:
+    DB $0A,$00,"  READY?  "
+TEXTO_VACIO_2:
+    DB $0A,$00,"          "
+; --- TEXTO_GAME_OVER (nombrada continuacion 19, convertida a dato real
+; aqui continuacion 23): mismo nombre EXACTO que MSX -- dibujado por
+; BUCLE_PRINCIPAL_JUEGO cuando VIDAS_RESTANTES llega a $FF (sin
+; vidas). ---
+TEXTO_GAME_OVER:
+    DB $0B,$42,"ESTAS FRITO"
 ; ==============================================================
 ;  PTR_TABLA_SPRITES ($9E8E, 64 entradas x 4 bytes = 256 bytes) --
 ;  CORREGIDA en sesion 31: la sesion 30 se equivoco al asumir que
@@ -6847,32 +6956,20 @@ CODE_9E8D:
 ;  entradas nuevas (28-63) no se han comparado byte a byte con
 ;  MSX todavia (posible trabajo futuro).
 ; ==============================================================
-; Constantes EQU (sesiones 30/31) -- direcciones que codigo mecanico de
-; otras partes del fichero (fuera de este bloque) referencia por su
-; nombre CODE_XXXX (cadenas JR/CALL autorreferenciales del desensamblado
-; lineal, mismo fenomeno visto ya en RUIDO_ALTAVOZ_HUERFANO/
-; LDI_EXTRA_HUERFANOS) pero que caen DENTRO de este bloque, ahora
-; reconvertido a DB/DW/INCBIN -- se resuelven aqui con su valor
-; numerico exacto (EQU no ocupa bytes ni cambia el binario resultante).
-CODE_9E90 EQU $9E90
-CODE_9E9B EQU $9E9B
-CODE_9E9D EQU $9E9D
-CODE_9E9F EQU $9E9F
-CODE_9EA1 EQU $9EA1
-CODE_9ED0 EQU $9ED0
-CODE_A101 EQU $A101
-CODE_AAAA EQU $AAAA
-CODE_ACBC EQU $ACBC
-CODE_ACBE EQU $ACBE
-CODE_ADBF EQU $ADBF
-CODE_ADEA EQU $ADEA
-CODE_AE34 EQU $AE34
-CODE_AF03 EQU $AF03
-CODE_AF5E EQU $AF5E
-CODE_B630 EQU $B630
-CODE_BD8A EQU $BD8A
-CODE_BDA7 EQU $BDA7
-CODE_BF01 EQU $BF01
+; Antes de aqui hubo un bloque de constantes EQU (sesiones 30/31,
+; ampliado sesion 56) para direcciones CODE_XXXX autorreferenciadas por
+; el desensamblado mecanico dentro de $9E3F-$9ED0 (entonces "datos
+; disfrazados de codigo"). CONTINUACION 23: esa zona (TABLA_POSICIONES_
+; HUD/TEXTO_FASE/TABLA_NUMEROS_NIVEL/TEXTO_VIDA_EXTRA/TEXTO_EXTRA/
+; TEXTO_VACIO_1/TEXTO_READY/TEXTO_VACIO_2/TEXTO_GAME_OVER, ver sus
+; cabeceras mas arriba) se reconvirtio POR COMPLETO a DB real -- las
+; instrucciones mecanicas que autorreferenciaban esas constantes ya no
+; existen, asi que las 21 constantes EQU que quedaban aqui se
+; eliminaron por quedar huerfanas (comprobado: 0 referencias en todo
+; el fichero tras la conversion). Otras 14 EQU de esta misma familia
+; (CODE_9E51 mas 13 entre $A101 y $BF01) ya se habian depurado justo
+; antes en esta misma sesion por el mismo motivo -- ver FINDINGS.md,
+; sesion 56 continuaciones 21 y 23, para el detalle completo.
 PTR_TABLA_SPRITES:
     DW SPR00_PM_VULN_DER_CERRADA
     DB 6,24

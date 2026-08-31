@@ -5788,3 +5788,576 @@ actualizado.
   (`$62C9-$62E1`, `$8358-$83CB`, `$C5DE-$C600`, más los 49 fragmentos
   de música ya extraídos pero no decodificados canción por canción).
 - Resto de la lista heredada de sesiones 40-55 sin cambios.
+
+## Sesión 56 (continuación 11) — `CODE_9A30` renombrada a `DIBUJAR_TEXTO_MARCADOR`
+
+Petición del usuario: identificar y nombrar `CODE_9A30`, dentro de
+`DIBUJAR_MARCADOR_PUNTOS`. Es la **cola común de las 3 ramas** que
+deciden qué etiqueta pintar en el marcador de puntuación: dígitos de
+puntuación formateados en `BUFFER_TEXTO_PUNTUACION` (caso normal),
+`ETIQUETA_PUNTUACION_MAXIMA` ("BESTIA", si se alcanza el límite de
+10000) o `ETIQUETA_PUNTUACION_DEMO` (" DEMO ", mientras el ciclador de
+demo está activo). Las 3 ramas dejan el puntero elegido en `IX` y
+saltan (o caen) aquí, donde se fija la posición fija de pantalla del
+marcador (`B=$B0`=Y176, `C=$B0`→columna 22, según la fórmula ya
+documentada de `CALCULAR_DIRECCION_PANTALLA`) y se llama a `CODE_9A90`
+(rutina de dibujo de cadena en VRAM, hermana de `ESCRIBIR_PATRON_VRAM`
+pero para una cadena completa terminada en `$FF`, no un solo
+carácter).
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado puro, sin cambio de bytes).
+
+## Sesión 56 (continuación 12) — `CODE_9A3E`/`CODE_9A49`/`CODE_9A54`/`CODE_9A69`/`CODE_9A90` renombradas
+
+Petición del usuario: identificar y nombrar el resto del subsistema de
+dibujado del marcador de puntuación, ya iniciado con
+`DIBUJAR_TEXTO_MARCADOR` (continuación 11). Dos piezas:
+
+**Conversión binario→decimal ASCII** (llamada una vez por
+`DIBUJAR_MARCADOR_PUNTOS` con `HL`=puntuación, `DE`=dirección de
+`BUFFER_TEXTO_PUNTUACION`), por división mediante resta repetida contra
+`TABLA_VALORES_DECIMAL_PUNTUACION` (1000,100,10):
+- `CODE_9A3E` → **`CONVERTIR_PUNTUACION_A_TEXTO`**: orquestador —
+  guarda la dirección del buffer en el par `DE` sombra (`EXX`) como
+  puntero fijo de escritura, deja el `DE` primario como contador de
+  posición, y arranca el bucle.
+- `CODE_9A49` → **`BUCLE_CONVERTIR_PUNTUACION`**: nombre que el propio
+  comentario de `TABLA_VALORES_DECIMAL_PUNTUACION` (sesión 56,
+  continuación anterior) ya anticipaba. Por cada divisor de la tabla,
+  lo carga en `BC` y resetea el contador de dígito; se detiene al leer
+  el divisor 10 (centinela de fin de tabla).
+- `CODE_9A54` → **`BUCLE_RESTAR_DIVISOR`**: bucle interno de resta
+  repetida que calcula el dígito decimal para el divisor actual.
+- `CODE_9A69` → **`ESCRIBIR_DIGITO_PUNTUACION`**: convierte el dígito
+  binario a ASCII (`+$30`) y lo escribe en la posición actual del
+  buffer (dirección en `DE` sombra + offset en `DE` primario),
+  avanzando el offset.
+
+**Dibujado de cadena en VRAM**:
+- `CODE_9A90` → **`DIBUJAR_CADENA_VRAM`**: hermana de
+  `ESCRIBIR_PATRON_VRAM` pero para una cadena completa de índices de
+  patrón terminada en `$FF` (dígitos ya convertidos, o las etiquetas
+  fijas "BESTIA"/" DEMO "), en vez de un solo carácter.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado puro, sin cambio de bytes).
+
+## Sesión 56 (continuación 13) — `DIBUJAR_CADENA_VRAM`: bucle interno renombrado, 3 etiquetas mecánicas eliminadas
+
+Petición del usuario: identificar y nombrar `CODE_9A94`, `CODE_9AAA`,
+`CODE_9AAD`, `CODE_9AAF`, `CODE_9AB1` y `CODE_9AC0`, el bucle interno
+de `DIBUJAR_CADENA_VRAM` (continuación 12) que copia el patrón de cada
+carácter de la cadena a pantalla.
+
+Antes de nombrar, se comprobó (grep de cada etiqueta en todo el
+fichero) cuáles son destino real de algún salto. Solo 3 de las 6 lo
+son:
+- `CODE_9A94` → **`BUCLE_DIBUJAR_CARACTER`** (destino de `JR` al final
+  del bucle): por cada carácter de la cadena, lee su índice de `IX`,
+  detecta el `$FF` de fin, y calcula la dirección del patrón de fuente
+  (misma fórmula base que `ESCRIBIR_PATRON_VRAM`).
+- `CODE_9AAA` → **`BUCLE_COPIAR_FILA_DOBLE`** (destino de `DJNZ`): por
+  cada una de las 8 filas del patrón, copia el byte de fuente y lo
+  escribe **dos veces seguidas** — el carácter se dibuja a doble altura
+  (16 líneas de píxel en vez de 8), acorde con que el marcador de
+  puntuación se ve más grande que el HUD normal.
+- `CODE_9AC0` → **`CONTINUAR_FILA_DOBLE`** (destino de 2 saltos
+  condicionales): punto de convergencia tras el chequeo de cruce de
+  tercio de pantalla, antes de repetir el bucle de fila.
+
+Las otras 3 (`CODE_9AAD`, `CODE_9AAF`, `CODE_9AB1`) **no las referencia
+ningún salto en todo el fichero** — son puntos de corte mecánicos del
+desensamblado lineal de primera pasada (`dasm2asm.py`), simple caída
+desde la instrucción anterior, sin ser objetivo de control de flujo
+real. Siguiendo el mismo criterio ya aplicado en la limpieza de
+`CODE_884B` (continuación 9), se eliminaron como etiqueta y su
+contenido quedó documentado con comentarios en línea dentro de
+`BUCLE_COPIAR_FILA_DOBLE` (duplicar fila / avanzar puntero de fuente /
+chequeo de cruce de tercio de pantalla).
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado + eliminación de etiquetas muertas, sin
+cambio de bytes).
+
+## Sesión 56 (continuación 14) — `LEER_ENTRADA`/`COMPROBAR_PAUSA`: 7 etiquetas renombradas, `CODE_9ACF` eliminada
+
+Petición del usuario: identificar y nombrar `CODE_9ACF`, `CODE_9AD8`,
+`CODE_9AED`, `CODE_9B00`, `CODE_9B03`, `CODE_9B14`, `CODE_9B26` y
+`CODE_9B38`, repartidas entre `LEER_ENTRADA`, `ESCANEAR_FILAS_TECLADO`
+y `COMPROBAR_PAUSA` (ya documentadas en conjunto desde sesión 26, ver
+el bit layout QAOP: bit0=DERECHA, bit1=IZQUIERDA, bit2=ABAJO,
+bit3=ARRIBA, bit4=SPACE, bit5=PAUSA).
+
+Mismo criterio que en continuaciones 9 y 13: se comprobó primero cuáles
+tienen salto entrante real. Solo `CODE_9ACF` no lo tiene (nadie salta
+ahí, caída directa tras `LD HL,$9B81`) — se eliminó como etiqueta,
+documentando su rol en comentario (decide si limpiar
+`ACUMULADOR_ENTRADA` o dejarlo acumular, según el parámetro `A` de
+`LEER_ENTRADA`).
+
+Las 7 restantes, todas con salto entrante real:
+- `CODE_9AD8` → **`DESPACHAR_MODO_ENTRADA`**: lee `MODO_ENTRADA`
+  ($91B9) y despacha a la tabla de teclas o rutina correspondiente
+  según su valor (0-3).
+- `CODE_9AED` → **`CARGAR_TABLA_MODO_0`**: carga `TABLA_TECLAS_MODO_0`
+  (esquema QAOP por defecto) antes del escaneo compartido.
+- `CODE_9B00` → **`TECLA_NO_PULSADA`**: dentro de
+  `ESCANEAR_FILAS_TECLADO`, camino "tecla no pulsada" (mete un bit 0
+  en `E`).
+- `CODE_9B03` → **`CONTINUAR_ESCANEO_TECLADO`**: cola común del bucle
+  de escaneo (avanza tabla, `DJNZ`).
+- `CODE_9B14` → **`RESOLVER_CONFLICTO_VERTICAL`**: dentro de
+  `COMPROBAR_PAUSA`, resuelve ABAJO+ARRIBA pulsados a la vez
+  (anti-jitter, sustituye por el acumulador anterior).
+- `CODE_9B26` → **`RESOLVER_CONFLICTO_HORIZONTAL`**: mismo mecanismo
+  para DERECHA+IZQUIERDA.
+- `CODE_9B38` → **`FUNDIR_ACUMULADOR_ENTRADA`**: paso final, funde
+  (`OR`) el resultado con `ACUMULADOR_ENTRADA` y lo guarda.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado + eliminación de 1 etiqueta muerta, sin
+cambio de bytes).
+
+## Sesión 56 (continuación 15) — `LEER_ENTRADA`: confirmado soporte de joystick Sinclair y Kempston (`CODE_9B51`/`CODE_9B7C`/`CODE_9AF1` renombradas)
+
+Petición del usuario: identificar y nombrar `CODE_9B51`, `CODE_9B7C` y
+`CODE_9AF1`, que completan el despacho de `DESPACHAR_MODO_ENTRADA`
+(continuación 14). Resuelve una duda que llevaba abierta desde sesión
+26 ("posible indicio de soporte para mas de un tipo de joystick").
+
+- `CODE_9AF1` → **`ESCANEAR_TABLA_TECLAS`**: motor de escaneo
+  compartido por los 3 modos basados en teclado (0, 1 y 3) — resetea
+  `E`/`B` y entra al bucle de fila, que cae en `COMPROBAR_PAUSA` como
+  epílogo común.
+- `CODE_9B51` → **`LEER_JOYSTICK_SINCLAIR`**: modo 1, emulación de
+  joystick **Sinclair Interface 2** vía teclado — escanea
+  `TABLA_TECLAS_MODO_1A` (fila numérica 1-5) y `TABLA_TECLAS_MODO_1B`
+  (0,9,8,7,6), fundiendo ambas lecturas en `COMPROBAR_PAUSA`.
+- `CODE_9B7C` → **`LEER_JOYSTICK_KEMPSTON`**: modo 2, **joystick
+  Kempston real por hardware** — `IN A,($1F)`, el puerto ESTÁNDAR
+  Kempston, sin pasar por `ESCANEAR_TABLA_TECLAS` en absoluto. El
+  formato de bits Kempston (bit0=derecha, bit1=izquierda, bit2=abajo,
+  bit3=arriba) coincide exactamente con el layout QAOP ya establecido
+  para `E`, por lo que el byte del puerto se usa tal cual.
+
+Con esto queda confirmado el mapa completo de `MODO_ENTRADA`: 0=teclado
+QAOP, 1=Sinclair Interface 2 emulado, 2=Kempston real, 3=esquema
+alternativo sin propósito confirmado (pendiente). Se actualizó también
+el comentario de cabecera de `LEER_ENTRADA` (sesión 26) que ya
+anticipaba la duda, para reflejar la confirmación.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado puro, sin cambio de bytes).
+
+## Sesión 56 (continuación 16) — `CODE_9B58` renombrada a `LEER_JOYSTICK_SINCLAIR_PUERTO_IZQUIERDO`
+
+Petición del usuario: identificar y nombrar `CODE_9B58`, la segunda
+mitad de `LEER_JOYSTICK_SINCLAIR` (continuación 15). A diferencia de
+las etiquetas mecánicas eliminadas en continuaciones 13 y 14 (simple
+caída entre instrucciones, sin ningún salto ni retorno de por medio),
+esta sí marca un punto de control de flujo real: es la **dirección de
+retorno** del `CALL ESCANEAR_TABLA_TECLAS` justo encima (tras escanear
+el puerto DERECHO Sinclair — `TABLA_TECLAS_MODO_1A`, teclas 1-5 — y
+volver aquí). Escanea entonces `TABLA_TECLAS_MODO_1B` (puerto
+IZQUIERDO, teclas 0,9,8,7,6) con `JR` definitivo esta vez.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado puro, sin cambio de bytes).
+
+## Sesión 56 (continuación 17) — Secuencia de arranque `INICIO`: 12 etiquetas de código renombradas (4 con nombre exacto de MSX) + 3 etiquetas de datos reclasificadas
+
+Petición del usuario: identificar y nombrar `CODE_9BEA`, `CODE_9C07`,
+`CODE_9C22`, `CODE_9C21`, `CODE_9C5B`, `CODE_9C49`, `CODE_9C76`,
+`CODE_9C8D`, `CODE_9C90`, `CODE_9C93`, `CODE_9CA6`, `CODE_9CCB`,
+`CODE_9E5E`, `CODE_9E5D` y `CODE_9E69` — toda la secuencia de arranque
+de partida/nivel de `INICIO`, ya con comentarios de hipótesis extensos
+de sesiones anteriores (paralelismo fuerte con MSX: 4 variables
+coinciden en cantidad/orden/valor con `REINICIAR_PARTIDA`, estructura
+que encaja con `PREPARAR_INICIO_NIVEL`/`BUSCAR_COLUMNA_HUD`).
+
+### 12 etiquetas de código (todas destino real de salto)
+
+Dado el paralelismo ya confirmado en comentarios previos, 4 usan el
+**mismo nombre exacto que MSX**:
+- `CODE_9C07` → **`REINICIAR_PARTIDA`**: reentrada "partida nueva"
+  (resetea vidas/puntuación/nivel).
+- `CODE_9C21` → **`PANTALLA_PRESENTACION_NIVEL`**: reentrada "nivel
+  siguiente" (sin resetear vidas/puntuación).
+- `CODE_9C22` → **`PREPARAR_INICIO_NIVEL`**: cuerpo compartido — carga
+  nivel, dibuja HUD, música si es partida nueva.
+- `CODE_9CCB` → **`BUSCAR_COLUMNA_HUD`**: bucle de "búsqueda de
+  columna del HUD", MSX describe esta misma fase con las mismas
+  palabras ("animación de búsqueda del HUD").
+
+El resto, nombres descriptivos nuevos (sin equivalente MSX directo
+identificado):
+- `CODE_9BEA` → `ESPERAR_TECLA_INICIO`
+- `CODE_9C49` → `BUCLE_ESPERA_PARTIDA_NUEVA`
+- `CODE_9C5B` → `COMPROBAR_VIDA_EXTRA`
+- `CODE_9C76` → `COMPROBAR_AVISO_ULTIMA_VIDA`
+- `CODE_9C8D` → `CONTINUAR_TRAS_AVISOS_HUD`
+- `CODE_9C90` → `BUCLE_ESPERA_LECTURA_HUD`
+- `CODE_9C93` → `REINICIAR_ESTADO_NIVEL`
+- `CODE_9CA6` → `GUARDAR_SELECTOR_SPRITE_INICIAL`
+
+### 3 etiquetas que en realidad son DATOS ($9E01-$9E8D)
+
+Mismo fenómeno "datos disfrazados de código" ya documentado en
+`$9A75-$9A8F` (sesión 56, continuación 11): el desensamblado mecánico
+decodifica esta zona como instrucciones sin sentido, pero es DATA.
+Cruzando qué escribe el código justo antes (`BUSCAR_COLUMNA_HUD`
+calcula un byte de atributo/color) con qué consume `DIBUJAR_TEXTO_VRAM`
+justo después, se identificaron 3 registros de texto (formato
+`[longitud, atributo, caracteres]`) para las 3 líneas de HUD dibujadas
+antes de `BUCLE_PRINCIPAL_JUEGO` (candidato al "READY?" de MSX):
+- `CODE_9E5D` → **`REGISTRO_TEXTO_HUD_1`** (longitud, registro 1,
+  dibujado en `$488C`).
+- `CODE_9E5E` → **`ATRIBUTO_TEXTO_HUD_1`** (byte de atributo del
+  registro 1, escrito dinámicamente).
+- `CODE_9E69` → **`REGISTRO_TEXTO_HUD_2`** (longitud, registro 2,
+  dibujado en `$48AC`).
+
+Solo estas 3 (las referenciadas directamente desde el código) — el
+resto del tramo, incluido el 3er registro en `$9E75` (ya referenciado
+como hex crudo sin etiqueta `CODE_`) y el resto de bytes sin
+referencia directa, queda pendiente de convertir a datos reales en una
+sesión futura.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado puro, sin cambio de bytes).
+
+## Sesión 56 (continuación 18) — corregido el nombrado del trío HUD: es `TEXTO_VACIO_1`/`TEXTO_READY`/`TEXTO_VACIO_2`, no genérico
+
+Petición del usuario: comprobar si el nombrado genérico dado en la
+continuación 17 (`REGISTRO_TEXTO_HUD_1`/`ATRIBUTO_TEXTO_HUD_1`/
+`REGISTRO_TEXTO_HUD_2`) debía ser tan específico como en MSX, donde la
+etiqueta `TEXTO_READY` ya identifica el contenido exacto.
+
+**Verificación por volcado de bytes reales** (`FISICO/CODE.bin`,
+`$9E01-$9E90`, no solo por analogía): confirma que la ronda anterior
+acertó el mecanismo pero **no el contenido exacto** — `$9E5D` (que
+llamé `REGISTRO_TEXTO_HUD_1`) NO es el texto "READY", es la línea en
+blanco de ANTES; el "READY?" real está en `$9E69`:
+
+```
+$9E5D: 0A 00 20 20 20 20 20 20 20 20 20 20  -> "          " (blanco)
+$9E69: 0A 00 20 20 52 45 41 44 59 3F 20 20  -> "  READY?  "
+$9E75: 0A 00 20 20 20 20 20 20 20 20 20 20  -> "          " (blanco)
+```
+
+Exactamente el mismo trío, mismo contenido, mismo orden, que
+`TEXTO_VACIO_1`/`TEXTO_READY`/`TEXTO_VACIO_2` de MSX (dibujado en
+`MOSTRAR_READY_Y_ARRANCAR_NIVEL`). Renombrado con los mismos nombres
+exactos:
+
+- `REGISTRO_TEXTO_HUD_1` ($9E5D) → **`TEXTO_VACIO_1`**
+- `ATRIBUTO_TEXTO_HUD_1` ($9E5E) → **eliminada**, sustituida por
+  `TEXTO_VACIO_1+1` (aritmética de etiqueta, mismo idioma EXACTO que
+  usa MSX para su atributo — `TEXTO_VACIO_1+1`/`TEXTO_READY+1`/
+  `TEXTO_VACIO_2+1` — en vez de un símbolo separado).
+- `REGISTRO_TEXTO_HUD_2` ($9E69) → **`TEXTO_READY`**
+- `$9E75` (hex crudo) → nueva etiqueta **`TEXTO_VACIO_2`**, completando
+  el trío.
+
+**Bonus descubierto en el mismo volcado** (fuera de alcance de esta
+petición, pendiente para una sesión futura si se quiere): 5 direcciones
+más de la misma familia que MSX también nombra con precisión:
+`$9E14`→`TEXTO_FASE`, `$9E1E`→`TABLA_NUMEROS_NIVEL`,
+`$9E3E`→`TEXTO_VIDA_EXTRA` (contenido real "EN LA PROXIMA... EXTRA" —
+el comentario actual de `COMPROBAR_AVISO_ULTIMA_VIDA` que dice
+"candidato aviso ultima vida" es incorrecto, no es un aviso de última
+vida), `$9E56`→`TEXTO_EXTRA`, y `CODE_9E81`→`TEXTO_GAME_OVER`
+(contenido real "ESTAS FRITO").
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado puro, sin cambio de bytes).
+
+## Sesión 56 (continuación 19) — `BUCLE_PRINCIPAL_JUEGO`/`VERIFICAR_FIN_NIVEL`/`VERIFICAR_ENTRADA`: 10 etiquetas renombradas + 13 movidas a EQU (patrón ya establecido)
+
+Petición del usuario: identificar y nombrar 23 etiquetas más de la
+misma zona (`CODE_9D3E`, `CODE_9DE1`, `CODE_9E81`, `CODE_9D85`,
+`CODE_9DD1`, `CODE_9DAC`, `CODE_9DCE`, `CODE_9DC3`, `CODE_9DC6`,
+`CODE_9DEA`, y 13 más entre `$9E3F` y `$9E90`).
+
+### 10 etiquetas reales (código genuino + 1 dato con referencia real)
+
+- `CODE_9D3E` → **`COMPROBAR_TEMPORIZADOR_MODO_ESPECIAL`**: convergencia
+  tras el intercambio opcional de color (solo si
+  `MODO_ESPECIAL_ACTIVO==2`), antes de decrementar el temporizador.
+- `CODE_9DE1` → **`REPINTAR_ICONOS_HUD`**: guarda `COLOR_ACTUAL` en
+  `$9E13` y arranca el repintado animado de iconos del HUD (recorrido
+  hacia atrás desde `$9E10`, guardado por `BUSCAR_COLUMNA_HUD`).
+- `CODE_9DEA` → **`BUCLE_REPINTAR_ICONOS_HUD`**: bucle interno de ese
+  repintado.
+- `CODE_9E81` → **`TEXTO_GAME_OVER`** (mismo nombre que MSX) —
+  confirmado por volcado de bytes: contenido real "ESTAS FRITO",
+  idéntico al `TEXTO_GAME_OVER` de MSX.
+- `CODE_9D85` → **`BUCLE_ESPERA_GAME_OVER`**: espera ~150 frames tras
+  dibujar el GAME OVER.
+- `CODE_9DD1` → **`ACTUALIZAR_PARPADEO_BOLA`**: actualiza temporizador
+  y posición del parpadeo de la bola.
+- `CODE_9DAC` → **`PREPARAR_TRANSICION_NIVEL`**: tras comprobar el
+  ciclo de 16 niveles, llama a `REPINTAR_ICONOS_HUD` y transfiere el
+  flag `$600E`→`$603E` para el siguiente nivel.
+- `CODE_9DCE` → **`CONTINUAR_BUCLE_PRINCIPAL`**: convergencia antes de
+  reentrar en `BUCLE_PRINCIPAL_JUEGO`.
+- `CODE_9DC3` → **`BUCLE_ESPERA_PAUSA`**: espera 50 frames tras
+  detectar pausa.
+- `CODE_9DC6` → **`ESPERAR_TECLA_REANUDAR`**: espera tecla para
+  reanudar tras pausa.
+
+### 13 etiquetas de ruido dentro de datos ya identificados
+
+`CODE_9E3F`, `CODE_9E41`, `CODE_9E4D`, `CODE_9E51`, `CODE_9E55`,
+`CODE_9E59`, `CODE_9E5C`, `CODE_9E5F`, `CODE_9E65`, `CODE_9E6B`,
+`CODE_9E73`, `CODE_9E7D`, `CODE_9E87` caían dentro de las cadenas de
+texto ya identificadas por volcado de bytes (`TEXTO_VIDA_EXTRA`,
+`TEXTO_EXTRA`, `TEXTO_READY`/`TEXTO_VACIO_2`/`TEXTO_GAME_OVER`), y
+comprobado que **todas sus referencias vienen de otras instrucciones
+igual de falsas del mismo tramo, nunca de código real**. Se aplicó el
+mismo patrón que el fichero ya usa para `CODE_9E9B`/`CODE_9E9D`/
+`CODE_9E9F`/`CODE_9EA1`/`CODE_9ED0` (sesión 30/31): eliminadas como
+etiqueta inline y movidas al bloque de constantes `EQU` existente
+(mismo nombre, valor numérico exacto, sin inventar nombre de
+subrutina). `CODE_9E90` ya estaba en ese bloque desde antes, sin
+cambios.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado + reubicación a EQU, sin cambio de
+bytes).
+
+## Sesión 56 (continuación 20) — cierre del tramo `$9E01-$9E8D`: `CODE_9E83`/`CODE_9E85`/`CODE_9E8D` a EQU, `CODE_9E79` eliminada
+
+Petición del usuario: continuar con el resto de etiquetas del mismo
+lote (la mayoría ya resueltas en continuación 19 o desde sesión
+30/31). Solo 4 seguían pendientes, todas dentro de `TEXTO_GAME_OVER`
+(los caracteres de "ESTAS FRITO") o justo al final del tramo:
+
+- `CODE_9E83`, `CODE_9E85`, `CODE_9E8D`: caen dentro de los caracteres
+  de `TEXTO_GAME_OVER`, referenciadas solo por otras instrucciones
+  falsas del mismo tramo (nunca código real) — movidas a `EQU`, mismo
+  patrón que continuación 19.
+- `CODE_9E79`: sin salto entrante en todo el fichero (ni siquiera uno
+  falso) — eliminada, mismo criterio que `CODE_9AAD`/`CODE_9ACF` de
+  rondas anteriores.
+
+Con esto queda completo el saneamiento del tramo `$9E01-$9E8D`
+("datos disfrazados de código" del HUD/READY/GAME OVER): de las
+etiquetas mecánicas originales de esa zona, todas están ya resueltas
+como dato real, movidas a `EQU`, o eliminadas por no representar
+ningún flujo de control genuino.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (reubicación a EQU + eliminación de 1 etiqueta
+muerta, sin cambio de bytes).
+
+## Sesión 56 (continuación 21) — 14 constantes `EQU` huérfanas eliminadas (`CODE_9E51` + 13 entre `$A101` y `$BF01`)
+
+Petición del usuario: analizar el bloque completo de constantes `EQU`
+(35 en total, incluidas las 22 de continuaciones 19-20) tras notar que
+podían corresponder a elementos de un array.
+
+**Comprobación de referencias**: de las 35, **14 no las referenciaba
+nada en absoluto en todo el fichero** (ni código real ni otra
+instrucción falsa) — resto muerto:
+- `CODE_9E51`: se me pasó en la continuación 19/20 — debería haberse
+  eliminado como `CODE_9E79`, no convertido a `EQU`.
+- 13 más, mucho más lejanas (`CODE_A101` … `CODE_BF01`), heredadas de
+  sesión 30/31, probablemente huérfanas desde que el código mecánico
+  que las usaba se sustituyó por `INCBIN`/`DB` sin limpiar también
+  estas constantes.
+
+**Comprobación de la hipótesis "elementos de array"**: se localizó
+dónde cae cada una de las 13 lejanas contra `PTR_TABLA_SPRITES` (64
+sprites × 144 bytes) y `TABLA_FUENTE`. 12 de las 13 caen en bytes
+sueltos dentro de un sprite o de la fuente de texto, sin ser límite de
+nada (`CODE_A101`→dentro de `TABLA_FUENTE`; `CODE_AAAA`→dentro de
+`SPR15`; `CODE_ACBC`/`CODE_ACBE`→`SPR19`; `CODE_ADBF`/`CODE_ADEA`/
+`CODE_AE34`→`SPR21`; `CODE_AF03`→`SPR23`; `CODE_B630`→`SPR36`;
+`CODE_BD8A`/`CODE_BDA7`→`SPR49`; `CODE_BF01`→`SPR51`). Solo
+**`CODE_AF5E` coincidía EXACTO con el inicio real de un elemento del
+array** — `SPR24_PM_HIPO_ABAJO_3` — pero por tener ya su propio nombre,
+la constante duplicada tampoco aportaba nada.
+
+Eliminadas las 14. Ampliado el comentario de cabecera del bloque `EQU`
+documentando la depuración.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (eliminación de constantes muertas, sin cambio de
+bytes).
+
+## Sesión 56 (continuación 22) — `REPINTAR_ICONOS_HUD` era `DESTELLO_ICONO_COLOR_HUD` (mismo nombre EXACTO que MSX) + `TABLA_POSICIONES_HUD` identificada
+
+Pregunta del usuario: "¿`BUCLE_REPINTAR_ICONOS_HUD` tiene analogía en
+MSX?". Sí, y muy fuerte: MSX tiene `DESTELLO_ICONO_COLOR_HUD`
+(`madmix1_body.asm:2816`), **idéntica instrucción a instrucción**
+(mismas variables `REGISTRO_NIVEL_ICONO_HUD`/`COLOR_ACTUAL`/
+`WAIT_VBLANK`, misma estructura de bucle). El comentario de MSX además
+corrige una hipótesis previa: no es un "repintado" ni una "máquina de
+escribir" que revela texto — es un **parpadeo/destello rápido** de
+icono+color mientras recorre hacia atrás la tabla desde donde la dejó
+la búsqueda.
+
+**Correlación de direcciones, confirmada por aritmética exacta**:
+`TABLA_POSICIONES_HUD` de MSX (`$9136`) tiene sus mismos offsets +15
+(puntero de búsqueda, word) y +18 (color guardado) reutilizados en
+Spectrum — y `$9E12` (offset +17, columna/icono objetivo) también
+coincide exactamente con MSX (`$9147`/`TABLA_POSICIONES_HUD+17`, usado
+en `BUSCAR_COLUMNA_HUD` de MSX). Esto resuelve varios comentarios
+"pendiente"/"sin equivalente MSX" que llevaban abiertos desde sesiones
+anteriores (línea de `CARGAR_NIVEL`, y el efecto de parpadeo del icono
+en modo hipopótamo).
+
+**Cambios**:
+- `REPINTAR_ICONOS_HUD` → **`DESTELLO_ICONO_COLOR_HUD`** (mismo nombre
+  que MSX).
+- `BUCLE_REPINTAR_ICONOS_HUD` → **`BUCLE_DESTELLO_ICONO_COLOR_HUD`**.
+- `$9E01` → nueva etiqueta **`TABLA_POSICIONES_HUD`** (mismo nombre
+  que MSX, contenido byte a byte ya verificado idéntico en rondas
+  anteriores), colocada en su posición real de bytes dentro del tramo
+  "datos disfrazados de código" (verificada contra `src/build/main.lst`
+  para no desplazar ni un byte).
+- `$9E10`/`$9E12`/`$9E13` (4 sitios distintos del fichero, no solo
+  dentro de `DESTELLO_ICONO_COLOR_HUD`/`BUSCAR_COLUMNA_HUD`, también en
+  `CARGAR_NIVEL` y en el efecto de parpadeo del modo hipopótamo) →
+  aritmética `TABLA_POSICIONES_HUD+15`/`+17`/`+18`, mismo idioma que
+  MSX.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (renombrado + nueva etiqueta en posición verificada,
+sin cambio de bytes).
+
+## Sesión 56 (continuación 23) — `TABLA_POSICIONES_HUD`-`TEXTO_GAME_OVER`: convertido POR COMPLETO de "datos disfrazados de código" a datos reales
+
+Petición del usuario: revisando MSX, lo que hay bajo `TABLA_POSICIONES_
+HUD` en Spectrum no son instrucciones sino datos que hay que
+estructurar con sus etiquetas correspondientes, igual que MSX. Correcto
+— hasta ahora esta zona (`$9E01-$9E8D`, ~140 bytes) seguía como
+desensamblado mecánico de primera pasada (instrucciones Z80 sin
+sentido real), con solo 4 etiquetas puntuales colocadas encima
+(`TABLA_POSICIONES_HUD`, `TEXTO_VACIO_1`, `TEXTO_READY`,
+`TEXTO_VACIO_2`, `TEXTO_GAME_OVER`) y el resto de constantes `EQU`
+resolviendo autorreferencias falsas.
+
+**Reconstrucción completa** contrastando byte a byte contra
+`FISICO/CODE.bin` y contra la estructura de datos de MSX
+(`madmix1_body.asm`, bloque `0x9136-0x92E3`): todo el tramo son en
+realidad **9 elementos de datos consecutivos**, mismo formato y mismos
+nombres EXACTOS que MSX:
+
+```
+TABLA_POSICIONES_HUD  ($9E01, 19 bytes)  -- ya nombrada continuacion 22
+TEXTO_FASE             ($9E14, 10 bytes)  -- " FASE 00"
+TABLA_NUMEROS_NIVEL     ($9E1E, 32 bytes)  -- " 0 1 2...9101112131415"
+TEXTO_VIDA_EXTRA        ($9E3E, 24 bytes)  -- "EN LA PROXIMA... EXTRA"
+TEXTO_EXTRA             ($9E56,  7 bytes)  -- "EXTRA"
+TEXTO_VACIO_1           ($9E5D, 12 bytes)  -- linea en blanco
+TEXTO_READY             ($9E69, 12 bytes)  -- "  READY?  "
+TEXTO_VACIO_2           ($9E75, 12 bytes)  -- linea en blanco
+TEXTO_GAME_OVER         ($9E81, 13 bytes)  -- "ESTAS FRITO"
+PTR_TABLA_SPRITES       ($9E8E)            -- ya identificada, sin cambios
+```
+
+Sustituidas TODAS las instrucciones mecánicas de esta zona por
+directivas `DB` reales (formato `[longitud, atributo, texto]`, igual
+que MSX), con etiquetas nuevas para `TEXTO_FASE` y
+`TABLA_NUMEROS_NIVEL` (no existían todavía) y datos reales para las 5
+ya nombradas en rondas anteriores (hasta ahora solo tenían la etiqueta
+de inicio, el resto seguía siendo instrucciones falsas).
+
+**Limpieza consecuente**: las 21 constantes `EQU` que resolvían
+autorreferencias falsas dentro de este tramo (`CODE_9E3F`...`CODE_9ED0`,
+`CODE_9E83`/`85`/`8D`/`90`/`9B`/`9D`/`9F`/`A1`) quedaron huérfanas al
+desaparecer las instrucciones mecánicas que las referenciaban —
+eliminadas, comprobando antes que ninguna tenía ya ninguna referencia.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** — confirma que la reconstrucción byte a byte de las 9
+tablas/textos es exacta (longitud, atributo y contenido de cada una
+coinciden con el binario original).
+
+## Sesión 56 (continuación 24) — sustituidas las 5 direcciones en hex crudo que quedaban de la conversión anterior
+
+Pregunta del usuario: las etiquetas nuevas de la continuación 23
+(`TEXTO_FASE`, `TABLA_NUMEROS_NIVEL`, etc.) deberían usarse también
+donde el código las referenciaba por dirección explícita — ¿es
+correcto? Sí. Comprobado sistemáticamente (grep de cada una de las 9
+direcciones contra todo el fichero): 4 ya estaban bien (`TEXTO_VACIO_1`/
+`TEXTO_READY`/`TEXTO_VACIO_2`/`TEXTO_GAME_OVER`, etiquetadas en rondas
+anteriores), pero **5 seguían en hex crudo** en `PREPARAR_INICIO_NIVEL`/
+`COMPROBAR_VIDA_EXTRA`/`COMPROBAR_AVISO_ULTIMA_VIDA`:
+
+- `$9E1E` → `TABLA_NUMEROS_NIVEL`
+- `$9E1C` → `TEXTO_FASE+8` (el "00" final de " FASE 00", donde se
+  copian los 2 dígitos del nivel)
+- `$9E14` → `TEXTO_FASE`
+- `$9E56` → `TEXTO_EXTRA`
+- `$9E3E` → `TEXTO_VIDA_EXTRA`
+
+De paso, comentarios actualizados: `PREPARAR_INICIO_NIVEL` pasa de
+"RESUELTA EN BUENA PARTE" a "RESUELTA POR COMPLETO" (los 3 textos que
+dibuja ya tienen contenido confirmado, no solo candidatos), y se repite
+en los 2 sitios relevantes la corrección de continuación 18 (el texto
+que dibuja `COMPROBAR_AVISO_ULTIMA_VIDA` anuncia la PRÓXIMA vida extra,
+pese al nombre histórico de la rutina).
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (sustitución de hex por etiquetas, sin cambio de
+bytes).
+
+## Sesión 56 (continuación 25) — `recursos/mapa_memoria.html` puesto al día: pasada completa de las 28 referencias `CODE_XXXX` obsoletas
+
+Pregunta del usuario: ¿se había actualizado la documentación HTML de
+`recursos/` en todas las sesiones de hoy? Respuesta honesta: no —
+`recursos/flujo_programa.html` sí (se regenera solo con
+`tools/gen_inventory.py` en cada ronda), pero `mapa_memoria.html`
+(mantenido a mano, sin herramienta de regeneración) llevaba sin
+tocarse desde el 14 de agosto, bastante antes de que empezara esta
+sesión larga.
+
+**Pasada completa** sobre las 28 referencias `CODE_XXXX` encontradas:
+
+- **Corrección de categoría real** (no solo de nombre): el segmento
+  `0x9DB8-0x9E8E` estaba marcado entero `category: "codigo"`, pero
+  desde la continuación 23 la mitad (`0x9E01-0x9E8D`) ya es DATO
+  (`TABLA_POSICIONES_HUD` + 8 textos). Dividido en 2 segmentos:
+  `0x9DB8-0x9E01` (código: `VERIFICAR_ENTRADA`/`ACTUALIZAR_PARPADEO_BOLA`/
+  `DESTELLO_ICONO_COLOR_HUD`) y `0x9E01-0x9E8E` (datos, nuevo segmento).
+- **Segundo error de categoría, de sesiones anteriores a hoy**: el
+  segmento `0x8358-0x83CB` decía `"sin analizar"`/`category: "mecanico"`,
+  pero verificado contra `src/build/main.lst` resultó ser código
+  totalmente resuelto (`CONSULTAR_LOSETA_LIBRE_DIRECCION` arranca
+  exactamente en `$8358`, y el tramo completo hasta `$83CA` es la cola
+  de `MOTOR_MOVIMIENTO_ITEM`, ya descrita en el segmento anterior).
+  Fusionado con `MOTOR_MOVIMIENTO_ITEM` (ahora `0x81BC-0x83CB`).
+- **26 referencias `CODE_XXXX` sustituidas** por su nombre actual,
+  mapeadas contra `src/build/main.lst` cuando no bastaba con buscar el
+  texto "antes CODE_XXXX" ya presente en `madmix_body.asm` (la mayoría
+  ya tenían esa anotación; unas pocas —`CODE_87BC`, `CODE_9C07`,
+  `CODE_9534`, `CODE_915A`/`9174`/`917D`/`9182`/`918D`— aparecían en
+  crudo sin ella).
+- Corregida una afirmación obsoleta que decía "`CODE_8DE5`,
+  `CODE_918D`, `CODE_8EB3` siguen sin resolver" — los 3 quedaron
+  resueltos en esta misma sesión (`DIBUJAR_CREDITOS_MENU`,
+  `APLICAR_ATRIBUTOS_MARCO_PARCIAL`, `INICIAR_DEMO`).
+
+**Verificado**: solo cambios de documentación (comentarios/etiquetas
+JS dentro del HTML, sin lógica ni estructura de datos alterada) —
+balance de llaves/corchetes comprobado, 67 segmentos de memoria
+listados (mismo total que antes: se fusionaron 2 en 1 y se añadió 1
+nuevo). No afecta a la compilación del binario.
