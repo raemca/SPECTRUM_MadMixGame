@@ -108,15 +108,19 @@ REGISTRO_NIVEL_CONTADOR_PELMAZOIDES:  ; $600F, 1 byte -- mismo nombre EXACTO
                                 ; que MSX, CONFIRMADO sesion 49 via
                                 ; HNDLR_PELMAZOIDE ("LD A,
                                 ; (REGISTRO_NIVEL_CONTADOR_PELMAZOIDES)").
-    DB $02
-    DB $01                         ; $6010, candidato REGISTRO_NIVEL_CONTADOR_MARICOCOS (sesion 40)
-    DB $01                         ; $6011, candidato REGISTRO_NIVEL_CONTADOR_REPUGNANTOSOS (sesion 40)
+    DB 2                        ; RESUELTO sesion 56 continuacion 27 (antes $02) --
+                                ; misma cantidad (contador de enemigos) que
+                                ; items_tipo3/1/2 en TABLA_NIVELES, ya decimal
+    DB 1                         ; $6010, candidato REGISTRO_NIVEL_CONTADOR_MARICOCOS (sesion 40) -- decimal (antes $01)
+    DB 1                         ; $6011, candidato REGISTRO_NIVEL_CONTADOR_REPUGNANTOSOS (sesion 40) -- decimal (antes $01)
 REGISTRO_NIVEL_DURACION_PARPADEO: ; REGISTRO_NIVEL_DURACION_PARPADEO, 1 byte -- mismo nombre EXACTO
                                 ; que MSX, confirmado sesion 39 via
                                 ; HNDLR_BOLA_PODER/HNDLR_HIPODOSO ("LD A,
                                 ; (REGISTRO_NIVEL_DURACION_PARPADEO) / LD
                                 ; (MODO_ESPECIAL_CUENTA_ATRAS),A").
-    DB $C8
+    DB 200                        ; RESUELTO sesion 56 continuacion 27 (antes $C8) --
+                                ; misma cantidad (segundos a 50Hz) que
+                                ; duracion_parpadeo en TABLA_NIVELES, ya decimal
 REGISTRO_NIVEL_LOSETA_COMODIN:    ; $6013, 1 byte
     DB 192
 REGISTRO_NIVEL_FILA_COLUMNA:      ; $6014, 2 bytes (word) -- fila=16,
@@ -265,12 +269,12 @@ MODO_ESPECIAL:                    ; $6040, 1 byte
 ; (escritor inicial: byte1=$68 o $40 segun bit0/bit7 de la direccion,
 ; byte2=direccion cruda, fija), AVISAR_PROXIMIDAD_PISTA (dispara el
 ; flash de avistamiento cuando el jugador se acerca al punto
-; registrado) y BUCLE_DIBUJAR_PISTA (mas abajo, RESUELTA la misma
+; registrado) y BUCLE_PISTA_TANQUE_AVION (mas abajo, RESUELTA la misma
 ; sesion). Formato de cada ranura: byte2 bit0 decide el eje -- si esta
 ; activo, columna fija $40=64 y fila variable =byte1 (linea vertical);
 ; si no, fila fija $38=56 y columna variable =byte1 (linea horizontal),
 ; con byte2 bit7 decidiendo el sentido. CONFIRMADO por lectura de
-; registros: byte1 NO es una posicion fija -- BUCLE_DIBUJAR_PISTA lo
+; registros: byte1 NO es una posicion fija -- BUCLE_PISTA_TANQUE_AVION lo
 ; REESCRIBE cada fotograma con el valor ya desplazado (+-8 horizontal,
 ; -16 vertical), asi que byte1 es la posicion EN VIVO de un icono que
 ; se desliza por el borde de pantalla (candidato: aviso de tanque/avion
@@ -284,7 +288,7 @@ TABLA_PISTAS_TANQUE_AVION:
     DB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; $6055-$605F, sin identificar
     JP ENTRADA_INTERRUPCION_VBLANK
 ; ==============================================================
-;  ENTRADA_MOTOR_MOVIMIENTO_COLISION: NO es solo un stub -- el "JR MOTOR_MOVIMIENTO_COLISION" salta por
+;  ENLACE_MOTOR_MOVIMIENTO_COLISION: NO es solo un stub -- el "JR MOTOR_MOVIMIENTO_COLISION" salta por
 ;  encima de 104 bytes ($6065-$60CC) que el desensamblado mecanico
 ;  mostraba como instrucciones sin sentido, pero que en realidad son
 ;  3 TABLAS DE DATOS REALES, activamente leidas desde otras partes del
@@ -376,7 +380,10 @@ TABLA_PISTAS_TANQUE_AVION:
 ;  contra PTR_TABLA_SPRITES ($9E8E, candidato) -- ESA es la tabla real
 ;  de graficos de sprites, ya localizada.
 ; ==============================================================
-ENTRADA_MOTOR_MOVIMIENTO_COLISION:
+; --- ENLACE_MOTOR_MOVIMIENTO_COLISION (antes ENTRADA_MOTOR_MOVIMIENTO_
+; COLISION): mismo nombre EXACTO que MSX (sesion 56 continuacion 30) --
+; ambas son literalmente "JR MOTOR_MOVIMIENTO_COLISION", nada mas. ---
+ENLACE_MOTOR_MOVIMIENTO_COLISION:
     JR MOTOR_MOVIMIENTO_COLISION
 TABLA_CLASE_ALINEAMIENTO:      ; $6065, 16 bytes
     DB 0,1,2,1,3,1,2,3,4,1,2,1,3,1,2,1
@@ -683,7 +690,7 @@ CONTINUAR_LLAMADA_SCROLL:
     POP AF
     CALL Z,MOTOR_ACTORES
 ; ==============================================================
-;  BUCLE_DIBUJAR_PISTA ($6224-$6265, antes CODE_6224 y compania) --
+;  BUCLE_PISTA_TANQUE_AVION ($6224-$6265, antes CODE_6224 y compania) --
 ;  RESUELTA sesion 56 tirando del hilo de CODE_61FB (ver cabecera
 ;  completa junto a TABLA_PISTAS_TANQUE_AVION, $6041, mas arriba).
 ;  Llamada cada fotograma desde BUCLE_PRINCIPAL_JUEGO. Por cada una de
@@ -694,55 +701,74 @@ CONTINUAR_LLAMADA_SCROLL:
 ;  MOTOR_ACTORES con B=$1A (sprite 26) para dibujar el icono en esa
 ;  posicion -- si el desplazamiento se sale del rango valido, borra la
 ;  ranura en vez de dibujar (icono ya fuera de pantalla).
+;
+;  NOMBRES ALINEADOS CON MSX (sesion 56 continuacion 30): la rutina
+;  completa y sus 5 etiquetas internas coinciden instruccion a
+;  instruccion con BUCLE_PISTA_TANQUE_AVION de MSX
+;  (madmix_scr_body.asm:693) -- PISTA_FORMATO_B/PISTA_FORMATO_B_POS/
+;  PISTA_FILA_FIJA/DIBUJAR_PISTA renombradas (antes DIBUJO_FORMATO_B/
+;  DIBUJO_FORMATO_B_POS/DIBUJO_FILA_FIJA/DIBUJAR_SPRITE_PISTA) con los
+;  mismos nombres EXACTOS. El cierre de bucle se llama
+;  SIGUIENTE_PISTA_TANQUE_AVION (antes DIBUJO_SIGUIENTE_PISTA) en vez
+;  del "SIGUIENTE_PISTA" global que usa MSX ahi, porque ese nombre ya
+;  lo tiene AVISAR_PROXIMIDAD_PISTA mas abajo (MSX lo resuelve con una
+;  etiqueta LOCAL ".SIGUIENTE_PISTA" ahi -- convencion que este fichero
+;  no usa todavia).
 ; ==============================================================
     LD B,$03
     LD HL,TABLA_PISTAS_TANQUE_AVION
-BUCLE_DIBUJAR_PISTA:
+BUCLE_PISTA_TANQUE_AVION:
     PUSH BC
     LD A,(HL)
     AND A
-    JR Z,DIBUJO_SIGUIENTE_PISTA
+    JR Z,SIGUIENTE_PISTA_TANQUE_AVION
     INC HL
     LD D,(HL)
     BIT 0,D
-    JR Z,DIBUJO_FORMATO_B
+    JR Z,PISTA_FORMATO_B
     DEC HL
     SUB $10
     LD D,A
     LD E,$40
-    JR NC,DIBUJAR_SPRITE_PISTA
+    JR NC,DIBUJAR_PISTA
     LD (HL),$00
-    JR DIBUJO_SIGUIENTE_PISTA
-DIBUJO_FORMATO_B:
+    JR SIGUIENTE_PISTA_TANQUE_AVION
+PISTA_FORMATO_B:
     BIT 7,(HL)
     DEC HL
-    JR Z,DIBUJO_FORMATO_B_POS
+    JR Z,PISTA_FORMATO_B_POS
     SUB $08
     LD E,A
     CP $08
-    JR NC,DIBUJO_FILA_FIJA
+    JR NC,PISTA_FILA_FIJA
     LD (HL),$00
-    JR DIBUJO_SIGUIENTE_PISTA
-DIBUJO_FORMATO_B_POS:
+    JR SIGUIENTE_PISTA_TANQUE_AVION
+PISTA_FORMATO_B_POS:
     ADD A,$08
     LD E,A
     CP $70
-    JR C,DIBUJO_FILA_FIJA
+    JR C,PISTA_FILA_FIJA
     LD (HL),$00
-    JR DIBUJO_SIGUIENTE_PISTA
-DIBUJO_FILA_FIJA:
+    JR SIGUIENTE_PISTA_TANQUE_AVION
+PISTA_FILA_FIJA:
     LD E,A
     LD D,$38
-DIBUJAR_SPRITE_PISTA:
+DIBUJAR_PISTA:
     LD (HL),A
     LD B,$1A
     XOR A
     CALL MOTOR_ACTORES
-DIBUJO_SIGUIENTE_PISTA:
+; --- SIGUIENTE_PISTA_TANQUE_AVION (antes DIBUJO_SIGUIENTE_PISTA):
+; MSX llama "SIGUIENTE_PISTA" (global) a esta misma cola de bucle, pero
+; ese nombre exacto ya lo usa (con razon, MSX tiene una etiqueta LOCAL
+; ".SIGUIENTE_PISTA" distinta ahi) la cola de AVISAR_PROXIMIDAD_PISTA
+; mas abajo -- este fichero no usa etiquetas locales con "." todavia,
+; asi que se desambigua con el sufijo _TANQUE_AVION en vez de chocar. ---
+SIGUIENTE_PISTA_TANQUE_AVION:
     INC HL
     INC HL
     POP BC
-    DJNZ BUCLE_DIBUJAR_PISTA
+    DJNZ BUCLE_PISTA_TANQUE_AVION
     RET
 ; ==============================================================
 ;  TABLA_MANEJADORES_LOSETA ($6266, 20 entradas x 2 bytes = 40
@@ -2870,172 +2896,192 @@ INICIALIZAR_ESTADO_NIVEL:
 ;  campos NO-puntero son IDENTICOS BYTE A BYTE (filas, items,
 ;  duracion, comodin, fila/columna, icono, objetivo) -- los 3
 ;  punteros de cada registro son logicamente distintos porque
-;  apuntan a las copias Spectrum de cuerpo/cabecera de nivel (en
-;  algun punto del tramo todavia sin analizar mas adelante en
-;  este fichero), no resueltos a etiquetas todavia -- quedan en
-;  hex crudo por ahora. Ver FINDINGS.md sesion 47.
+;  apuntan a las copias Spectrum de cuerpo/cabecera de nivel. YA
+;  RESUELTOS a etiquetas (CORREGIDO sesion 56 -- este comentario decia
+;  "quedan en hex crudo" desde sesion 47, pero la resolucion de
+;  CUERPO_Lxx/CABECERA_7F1F/7F7F/8000 en sesion 50 ya los habia
+;  sustituido en las 16 entradas de la tabla, sin que se actualizara
+;  esta cabecera). Ver FINDINGS.md sesiones 47 y 50.
+;
+;  NOTACION decimal (sesion 56, continuacion 27): la mayoria de campos
+;  numericos de esta tabla se reescribieron en decimal (antes
+;  hexadecimal) al confirmar por analisis de los 16 registros que asi
+;  es como los habria escrito el programador original -- son
+;  cantidades pensadas en decimal, no direcciones ni mascaras de bit:
+;  duracion_parpadeo son SIEMPRE segundos redondos a 50Hz (50/80/150/
+;  200/250 fotogramas = 1/1.6/3/4/5s; el unico valor atipico, 255, es
+;  probable centinela de "maximo" en vez de una duracion literal de
+;  5.1s); fila_ref/columna_ref y el par sin identificar son, en los 16
+;  niveles SIN EXCEPCION, multiplos exactos de 4 -- misma unidad de
+;  subpixel que REGISTRO_NIVEL_POSICION_COMECOCOS (alineada con
+;  AND $FC en otras partes del motor). icono_hud se ha dejado en
+;  hexadecimal a proposito: su valor no es una cantidad, es una de las
+;  entradas crudas de TABLA_POSICIONES_HUD (tambien en hex), y
+;  mantener la misma notacion facilita comparar ambas tablas a simple
+;  vista. Cambio de notacion puro -- verificado 0 diferencias tras
+;  recompilar.
 ; ==============================================================
 TABLA_NIVELES:
 ; --- nivel 0 ---
     DW CUERPO_L01,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $16,$00                  ; filas variables (total filas=3+22=25), campo7 sin identificar
-    DB $05,$00,$00                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $30,$34                  ; fila/columna de referencia inicial
-    DB $18,$2C                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $0072                        ; objetivo de bolitas para completar el nivel (114)
+    DB 22,0                    ; filas variables (total filas=3+22=25), campo7 sin identificar
+    DB 5,0,0                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 48,52                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 12,13)
+    DB 24,44                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 6,11)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 114                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 1 ---
     DW CUERPO_L01,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $16,$00                  ; filas variables (total filas=3+22=25), campo7 sin identificar
-    DB $05,$00,$00                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $30,$34                  ; fila/columna de referencia inicial
-    DB $18,$2C                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $0072                        ; objetivo de bolitas para completar el nivel (114)
+    DB 22,0                    ; filas variables (total filas=3+22=25), campo7 sin identificar
+    DB 5,0,0                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 48,52                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 12,13)
+    DB 24,44                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 6,11)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 114                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 2 ---
     DW CUERPO_L02,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $0F,$01                  ; filas variables (total filas=3+15=18), campo7 sin identificar
-    DB $04,$00,$00                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $40                            ; tile comodin
-    DB $40,$3C                  ; fila/columna de referencia inicial
-    DB $28,$00                  ; sin identificar
-    DB $38                            ; icono/digito HUD
-    DW $0093                        ; objetivo de bolitas para completar el nivel (147)
+    DB 15,1                    ; filas variables (total filas=3+15=18), campo7 sin identificar
+    DB 4,0,0                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 64                             ; tile comodin
+    DB 64,60                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 16,15)
+    DB 40,0                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,0)
+    DB $38                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 147                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 3 ---
     DW CUERPO_L03,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $10,$00                  ; filas variables (total filas=3+16=19), campo7 sin identificar
-    DB $04,$01,$00                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $40,$28                  ; fila/columna de referencia inicial
-    DB $28,$08                  ; sin identificar
-    DB $30                            ; icono/digito HUD
-    DW $0078                        ; objetivo de bolitas para completar el nivel (120)
+    DB 16,0                    ; filas variables (total filas=3+16=19), campo7 sin identificar
+    DB 4,1,0                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 64,40                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 16,10)
+    DB 40,8                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,2)
+    DB $30                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 120                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 4 ---
     DW CUERPO_L04,CABECERA_7F1F,CABECERA_7F1F   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $0F,$00                  ; filas variables (total filas=3+15=18), campo7 sin identificar
-    DB $03,$01,$00                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $3C,$3C                  ; fila/columna de referencia inicial
-    DB $28,$18                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $004F                        ; objetivo de bolitas para completar el nivel (79)
+    DB 15,0                    ; filas variables (total filas=3+15=18), campo7 sin identificar
+    DB 3,1,0                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 60,60                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 15,15)
+    DB 40,24                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,6)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 79                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 5 ---
     DW CUERPO_L05,CABECERA_7F1F,CABECERA_7F1F   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $10,$01                  ; filas variables (total filas=3+16=19), campo7 sin identificar
-    DB $03,$00,$01                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $3C,$3C                  ; fila/columna de referencia inicial
-    DB $24,$08                  ; sin identificar
-    DB $38                            ; icono/digito HUD
-    DW $0065                        ; objetivo de bolitas para completar el nivel (101)
+    DB 16,1                    ; filas variables (total filas=3+16=19), campo7 sin identificar
+    DB 3,0,1                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 60,60                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 15,15)
+    DB 36,8                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 9,2)
+    DB $38                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 101                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 6 ---
     DW CUERPO_L06,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $12,$00                  ; filas variables (total filas=3+18=21), campo7 sin identificar
-    DB $03,$00,$01                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $40                            ; tile comodin
-    DB $40,$18                  ; fila/columna de referencia inicial
-    DB $28,$10                  ; sin identificar
-    DB $38                            ; icono/digito HUD
-    DW $0097                        ; objetivo de bolitas para completar el nivel (151)
+    DB 18,0                    ; filas variables (total filas=3+18=21), campo7 sin identificar
+    DB 3,0,1                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 64                             ; tile comodin
+    DB 64,24                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 16,6)
+    DB 40,16                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,4)
+    DB $38                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 151                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 7 ---
     DW CUERPO_L07,CABECERA_7F1F,CABECERA_7F1F   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $13,$00                  ; filas variables (total filas=3+19=22), campo7 sin identificar
-    DB $03,$00,$01                    ; num. items tipo 3/1/2
-    DB $C8                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $08,$4C                  ; fila/columna de referencia inicial
-    DB $F0,$34                  ; sin identificar
-    DB $60                            ; icono/digito HUD
-    DW $007E                        ; objetivo de bolitas para completar el nivel (126)
+    DB 19,0                    ; filas variables (total filas=3+19=22), campo7 sin identificar
+    DB 3,0,1                        ; num. items tipo 3/1/2
+    DB 200                             ; duracion parpadeo bola/pista especial (fotogramas = 4.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 8,76                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 2,19)
+    DB 240,52                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 60,13)
+    DB $60                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 126                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 8 ---
     DW CUERPO_L08,CABECERA_7F7F,CABECERA_7F7F   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $0F,$00                  ; filas variables (total filas=3+15=18), campo7 sin identificar
-    DB $03,$00,$01                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $40,$40                  ; fila/columna de referencia inicial
-    DB $28,$18                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $005A                        ; objetivo de bolitas para completar el nivel (90)
+    DB 15,0                    ; filas variables (total filas=3+15=18), campo7 sin identificar
+    DB 3,0,1                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 64,64                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 16,16)
+    DB 40,24                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,6)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 90                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 9 ---
     DW CUERPO_L09,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $12,$00                  ; filas variables (total filas=3+18=21), campo7 sin identificar
-    DB $03,$02,$00                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $40                            ; tile comodin
-    DB $40,$2C                  ; fila/columna de referencia inicial
-    DB $28,$24                  ; sin identificar
-    DB $38                            ; icono/digito HUD
-    DW $00A8                        ; objetivo de bolitas para completar el nivel (168)
+    DB 18,0                    ; filas variables (total filas=3+18=21), campo7 sin identificar
+    DB 3,2,0                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 64                             ; tile comodin
+    DB 64,44                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 16,11)
+    DB 40,36                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,9)
+    DB $38                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 168                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 10 ---
     DW CUERPO_L10,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $11,$00                  ; filas variables (total filas=3+17=20), campo7 sin identificar
-    DB $03,$00,$02                    ; num. items tipo 3/1/2
-    DB $32                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $40,$30                  ; fila/columna de referencia inicial
-    DB $28,$18                  ; sin identificar
-    DB $60                            ; icono/digito HUD
-    DW $0074                        ; objetivo de bolitas para completar el nivel (116)
+    DB 17,0                    ; filas variables (total filas=3+17=20), campo7 sin identificar
+    DB 3,0,2                        ; num. items tipo 3/1/2
+    DB 50                             ; duracion parpadeo bola/pista especial (fotogramas = 1.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 64,48                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 16,12)
+    DB 40,24                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,6)
+    DB $60                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 116                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 11 ---
     DW CUERPO_L11,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $15,$00                  ; filas variables (total filas=3+21=24), campo7 sin identificar
-    DB $03,$01,$00                    ; num. items tipo 3/1/2
-    DB $FF                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $40                            ; tile comodin
-    DB $64,$1C                  ; fila/columna de referencia inicial
-    DB $08,$28                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $011F                        ; objetivo de bolitas para completar el nivel (287)
+    DB 21,0                    ; filas variables (total filas=3+21=24), campo7 sin identificar
+    DB 3,1,0                        ; num. items tipo 3/1/2
+    DB 255                             ; duracion parpadeo bola/pista especial (fotogramas = 5.10s a 50Hz, probable centinela de maximo)
+    DB 64                             ; tile comodin
+    DB 100,28                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 25,7)
+    DB 8,40                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 2,10)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 287                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 12 ---
     DW CUERPO_L12,CABECERA_7F1F,CABECERA_7F1F   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $13,$01                  ; filas variables (total filas=3+19=22), campo7 sin identificar
-    DB $03,$01,$01                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $41                            ; tile comodin
-    DB $44,$28                  ; fila/columna de referencia inicial
-    DB $2C,$10                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $00B0                        ; objetivo de bolitas para completar el nivel (176)
+    DB 19,1                    ; filas variables (total filas=3+19=22), campo7 sin identificar
+    DB 3,1,1                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 65                             ; tile comodin
+    DB 68,40                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 17,10)
+    DB 44,16                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 11,4)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 176                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 13 ---
     DW CUERPO_L13,CABECERA_7F1F,CABECERA_7F1F   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $15,$00                  ; filas variables (total filas=3+21=24), campo7 sin identificar
-    DB $02,$00,$03                    ; num. items tipo 3/1/2
-    DB $50                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $40,$3C                  ; fila/columna de referencia inicial
-    DB $28,$24                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $0069                        ; objetivo de bolitas para completar el nivel (105)
+    DB 21,0                    ; filas variables (total filas=3+21=24), campo7 sin identificar
+    DB 2,0,3                        ; num. items tipo 3/1/2
+    DB 80                             ; duracion parpadeo bola/pista especial (fotogramas = 1.60s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 64,60                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 16,15)
+    DB 40,36                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 10,9)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 105                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 14 ---
     DW CUERPO_L14,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $17,$01                  ; filas variables (total filas=3+23=26), campo7 sin identificar
-    DB $02,$01,$02                    ; num. items tipo 3/1/2
-    DB $FA                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $44,$60                  ; fila/columna de referencia inicial
-    DB $64,$50                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $010B                        ; objetivo de bolitas para completar el nivel (267)
+    DB 23,1                    ; filas variables (total filas=3+23=26), campo7 sin identificar
+    DB 2,1,2                        ; num. items tipo 3/1/2
+    DB 250                             ; duracion parpadeo bola/pista especial (fotogramas = 5.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 68,96                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 17,24)
+    DB 100,80                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 25,20)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 267                          ; objetivo de bolitas para completar el nivel
 ; --- nivel 15 ---
     DW CUERPO_L15,CABECERA_8000,CABECERA_8000   ; cuerpo, cabecera(arriba), cabecera(abajo)
-    DB $12,$01                  ; filas variables (total filas=3+18=21), campo7 sin identificar
-    DB $03,$01,$01                    ; num. items tipo 3/1/2
-    DB $96                            ; duracion parpadeo bola/pista especial (fotogramas)
-    DB $3F                            ; tile comodin
-    DB $60,$30                  ; fila/columna de referencia inicial
-    DB $48,$10                  ; sin identificar
-    DB $70                            ; icono/digito HUD
-    DW $00A5                        ; objetivo de bolitas para completar el nivel (165)
+    DB 18,1                    ; filas variables (total filas=3+18=21), campo7 sin identificar
+    DB 3,1,1                        ; num. items tipo 3/1/2
+    DB 150                             ; duracion parpadeo bola/pista especial (fotogramas = 3.00s a 50Hz)
+    DB 63                             ; tile comodin
+    DB 96,48                    ; fila/columna de referencia inicial (subpixel, /4 = loseta: 24,12)
+    DB 72,16                    ; sin identificar (multiplo exacto de 4 en los 16 niveles, misma unidad de subpixel que fila/columna: /4 = 18,4)
+    DB $70                            ; icono/digito HUD -- coincide con una entrada de TABLA_POSICIONES_HUD
+    DW 165                          ; objetivo de bolitas para completar el nivel
 ; ==============================================================
 ;  PROCESAR_MENU_CONTROLES / TABLA_MENU_OPCIONES_CONTROL ($8A20-$8BCA,
 ;  427 bytes) -- RESUELTO POR COMPLETO (sesion 54), desensamblado a
@@ -3048,7 +3094,7 @@ TABLA_NIVELES:
 ;  direcciones (mismo metodo ya usado sesiones 40-41 con
 ;  HNDLR_MARICOCO/HNDLR_REGPUNANTOSO).
 ; ==============================================================
-; DIBUJAR_CREDITOS_MENU ya existe como etiqueta mecanica real mas abajo, dentro
+; DIBUJAR_CREDITOS ya existe como etiqueta mecanica real mas abajo, dentro
 ; del tramo $8C1F-$8F55 todavia sin convertir -- referenciada aqui
 ; tal cual, sin EQU (candidato: "parpadear borde/color mientras
 ; espera tecla"). INICIAR_DEMO (antes CODE_8EB3) RESUELTA POR
@@ -3066,7 +3112,7 @@ TEMPORIZADOR_DEMO_MENU EQU $8EB1     ; variable de 2 bytes, mismo tramo
 ; para revisar el menu durante la pausa. Hipotesis de sesion 40
 ; descartada -- ver FINDINGS.md sesion 54.
 PROCESAR_MENU_CONTROLES:
-    CALL DIBUJAR_CREDITOS_MENU
+    CALL DIBUJAR_CREDITOS
     LD B,$46                      ; 70 pasadas maximo antes de continuar igualmente
 BUCLE_ESPERA_TECLA_MENU:
     PUSH BC
@@ -3098,7 +3144,7 @@ GUARDAR_TEMPORIZADOR_DEMO:
     LD HL,$8AA1                   ; direccion "falsa" apilada solo para
     PUSH HL                       ; balancear PUSH/POP mas abajo (nunca se ejecuta como codigo)
     BIT 0,A                       ; bit0 = tecla "0" (JUGAR)
-    JR Z,DESPACHAR_OPCION_MENU
+    JR Z,DESPACHAR_ACCION_MENU
     POP HL
     POP AF
     CALL LIMPIAR_PANTALLA_MENU
@@ -3128,23 +3174,31 @@ BUCLE_LIMPIAR_FRANJA_MENU:
     POP BC
     DJNZ BUCLE_LIMPIAR_FRANJA_MENU
     RET
-; DESPACHAR_OPCION_MENU: bit1=TECLADO(1), bit2=SINCLAIR(3), bit3=KEMPSTON(2),
+; DESPACHAR_ACCION_MENU (antes DESPACHAR_OPCION_MENU) y sus 3 destinos
+; SELECCIONAR_OPCION_TECLADO/_DEMO/_REDEFINIR_TECLAS (antes
+; SELECCIONAR_TECLADO/_DEMO/_REDEFINIR) -- mismos nombres EXACTOS que
+; MSX (sesion 56 continuacion 30, mismo rol: despacho por bit a un
+; SELECCIONAR_OPCION_* concreto). Spectrum tiene 5 ramas en vez de las
+; 4 de MSX (teclado/sinclair/kempston/redefine/demo frente a
+; teclado/joystick/redefine/demo) -- SELECCIONAR_SINCLAIR/KEMPSTON no
+; tienen equivalente MSX directo, se quedan con nombre propio.
+; bit1=TECLADO(1), bit2=SINCLAIR(3), bit3=KEMPSTON(2),
 ; bit4=REDEFINE(4), bit5=DEMO(5) -- el orden de bits no coincide con la
 ; numeracion del menu (depende del orden fisico de TABLA_TECLAS_MENU).
 ; Si ninguno de los 5 bits esta activo, reintenta hasta que
 ; TEMPORIZADOR_DEMO_MENU llegue a 0 (entonces reinicia el menu entero,
 ; PROCESAR_MENU_CONTROLES, candidato a arrancar la demo).
-DESPACHAR_OPCION_MENU:
+DESPACHAR_ACCION_MENU:
     BIT 5,A
-    JP NZ,SELECCIONAR_DEMO
+    JP NZ,SELECCIONAR_OPCION_DEMO
     BIT 1,A
-    JP NZ,SELECCIONAR_TECLADO
+    JP NZ,SELECCIONAR_OPCION_TECLADO
     BIT 2,A
     JP NZ,SELECCIONAR_SINCLAIR
     BIT 3,A
     JP NZ,SELECCIONAR_KEMPSTON
     BIT 4,A
-    JP NZ,SELECCIONAR_REDEFINIR
+    JP NZ,SELECCIONAR_OPCION_REDEFINIR_TECLAS
     POP HL                        ; descarta la direccion "falsa" $8AA1
     POP AF
     AND A
@@ -3192,7 +3246,7 @@ TABLA_MENU_OPCIONES_CONTROL:
     DB 17,$44, "4 REDEFINE TECLAS"  ; $8B15
     DB 6,$04,  "5 DEMO"             ; $8B28
     DB 9,$46,  "0 JUGAR  "          ; $8B30
-SELECCIONAR_TECLADO:
+SELECCIONAR_OPCION_TECLADO:
     CALL REDEFINIR_TECLAS                ; sin resolver -- solo esta opcion lo llama
     LD A,$47
     LD ($8AE8),A                  ; resalta "1 TECLADO"
@@ -3204,7 +3258,7 @@ SELECCIONAR_TECLADO:
     CALL FINALIZAR_MENU_CONTROLES
     CALL APLICAR_ATRIBUTOS_MARCO_PARCIAL
     RET
-SELECCIONAR_DEMO:
+SELECCIONAR_OPCION_DEMO:
     CALL INICIAR_DEMO              ; RESUELTA sesion 56 (antes CODE_8EB3)
     CALL FINALIZAR_MENU_CONTROLES
     CALL APLICAR_ATRIBUTOS_MARCO_PARCIAL
@@ -3227,7 +3281,7 @@ SELECCIONAR_KEMPSTON:
     LD ($8AE8),A
     LD ($8B03),A
     RET
-SELECCIONAR_REDEFINIR:
+SELECCIONAR_OPCION_REDEFINIR_TECLAS:
     LD A,$00
     LD (MODO_ENTRADA),A           ; modo 0 -- mismo modo que TECLADO (la propia
                                     ; redefinicion de teclas, TABLA_TECLAS_MODO_3,
@@ -3333,7 +3387,7 @@ BUCLE_COPIAR_PATRON_CARACTER:
 ; [C=numero de caracteres, color/atributo, C bytes de datos]. Cada
 ; byte del registro >=$20 dibuja un caracter via ESCRIBIR_PATRON_VRAM
 ; avanzando HL; si es <$20, NO es caracter -- es un contador de
-; columnas en blanco a saltar (SALTAR_COLUMNAS_BLANCO hace INC HL A veces). Llamada
+; columnas en blanco a saltar (SALTAR_COLUMNAS hace INC HL A veces). Llamada
 ; 32 veces en todo el motor -- es la rutina de texto/HUD mas usada del
 ; juego, equivalente exacto de MSX salvo que aqui HL avanza de 1 en 1
 ; (columna de pantalla lineal) en vez de +8 (offset dentro de un
@@ -3347,26 +3401,33 @@ DIBUJAR_TEXTO_VRAM:
                                         ; ESCRIBIR_PATRON_VRAM)
     EX AF,AF'
     INC DE
-BUCLE_DIBUJAR_TEXTO_VRAM:
+; --- BUCLE_CARACTER/CONTINUAR_CARACTER/SALTAR_COLUMNAS (antes BUCLE_
+; DIBUJAR_TEXTO_VRAM/CONTINUAR_DIBUJAR_TEXTO_VRAM/SALTAR_COLUMNAS_
+; BLANCO): mismos nombres EXACTOS que las etiquetas LOCALES de MSX
+; (.BUCLE_CARACTER/.CONTINUAR_CARACTER/.SALTAR_COLUMNAS dentro de su
+; propio DIBUJAR_TEXTO_VRAM, madmix_scr_body.asm:3810-3838) -- sesion
+; 56 continuacion 32, sin punto porque este fichero no usa etiquetas
+; locales. Estructura identica instruccion a instruccion. ---
+BUCLE_CARACTER:
     LD A,(DE)
-    CP $20                               ; <$20 -> no es caracter, ver SALTAR_COLUMNAS_BLANCO
-    JR C,SALTAR_COLUMNAS_BLANCO
+    CP $20                               ; <$20 -> no es caracter, ver SALTAR_COLUMNAS
+    JR C,SALTAR_COLUMNAS
     PUSH HL
     PUSH DE
     CALL ESCRIBIR_PATRON_VRAM
     POP DE
     POP HL
     INC HL                               ; siguiente columna
-CONTINUAR_DIBUJAR_TEXTO_VRAM:
+CONTINUAR_CARACTER:
     INC DE
     DEC C
-    JR NZ,BUCLE_DIBUJAR_TEXTO_VRAM
+    JR NZ,BUCLE_CARACTER
     RET
-SALTAR_COLUMNAS_BLANCO:                               ; "saltar A columnas en blanco"
+SALTAR_COLUMNAS:                               ; "saltar A columnas en blanco"
     INC HL
     DEC A
-    JR NZ,SALTAR_COLUMNAS_BLANCO
-    JR CONTINUAR_DIBUJAR_TEXTO_VRAM
+    JR NZ,SALTAR_COLUMNAS
+    JR CONTINUAR_CARACTER
 ; --- ESPERAR_TECLA_PULSADA / ESPERAR_TECLA_SOLTADA: RESUELTAS y
 ; RENOMBRADAS (sesion 23), mismos nombres EXACTOS que en MSX
 ; (madmix_scr_body.asm, $5CFE/$5D04) -- mismo rol, mecanismo Spectrum
@@ -3390,9 +3451,9 @@ ESPERAR_TECLA_SOLTADA:
     RET
 ; ==============================================================
 ;  REDEFINIR_TECLAS ($8C1F-$8D67 codigo + $8D68-$9044 logica de
-;  escaneo, 660 B junto con DIBUJAR_CREDITOS_MENU) -- RESUELTO POR
+;  escaneo, 660 B junto con DIBUJAR_CREDITOS) -- RESUELTO POR
 ;  COMPLETO sesion 56 (antes CODE_8C1F, candidato desde sesion 54,
-;  llamado unicamente desde SELECCIONAR_TECLADO). Pantalla interactiva
+;  llamado unicamente desde SELECCIONAR_OPCION_TECLADO). Pantalla interactiva
 ;  de redefinicion de teclas de la opcion "4 REDEFINE TECLAS" del menu
 ;  de controles.
 ;
@@ -3402,7 +3463,7 @@ ESPERAR_TECLA_SOLTADA:
 ;  8 filas via el puerto ULA, no solo las teclas de juego) hasta
 ;  detectar una tecla pulsada, calcula su (puerto,mascara de bit) real
 ;  y lo escribe DIRECTAMENTE en TABLA_TECLAS_MODO_0 ($9B45) -- esto
-;  explica por que SELECCIONAR_REDEFINIR fija MODO_ENTRADA=0 (sesion
+;  explica por que SELECCIONAR_OPCION_REDEFINIR_TECLAS fija MODO_ENTRADA=0 (sesion
 ;  54, "NOTA: mismo modo que TECLADO"): la redefinicion no crea una
 ;  tabla nueva, SOBREESCRIBE la tabla del modo QAOP por defecto. Un
 ;  array de 40 bytes ($8DBA, uno por tecla fisica del Spectrum)
@@ -3424,7 +3485,7 @@ REDEFINIR_TECLAS:
     LD HL,$4089
     LD DE,ETIQUETA_TECLA_FUEGO
     CALL DIBUJAR_TEXTO_VRAM
-    CALL ESPERAR_TECLA_REDEFINIDA
+    CALL ESPERAR_TECLA_NUEVA
     LD A,$47
     EX AF,AF'
     LD A,(ULTIMA_TECLA_REDEFINIDA)
@@ -3439,7 +3500,7 @@ REDEFINIR_TECLA_ARRIBA:
     LD HL,$40C9
     LD DE,ETIQUETA_TECLA_ARRIBA
     CALL DIBUJAR_TEXTO_VRAM
-    CALL ESPERAR_TECLA_REDEFINIDA
+    CALL ESPERAR_TECLA_NUEVA
     LD A,$47
     EX AF,AF'
     LD A,(ULTIMA_TECLA_REDEFINIDA)
@@ -3454,7 +3515,7 @@ REDEFINIR_TECLA_ABAJO:
     LD HL,$4809
     LD DE,ETIQUETA_TECLA_ABAJO
     CALL DIBUJAR_TEXTO_VRAM
-    CALL ESPERAR_TECLA_REDEFINIDA
+    CALL ESPERAR_TECLA_NUEVA
     LD A,$47
     EX AF,AF'
     LD A,(ULTIMA_TECLA_REDEFINIDA)
@@ -3469,7 +3530,7 @@ REDEFINIR_TECLA_IZQUIERDA:
     LD HL,$4849
     LD DE,ETIQUETA_TECLA_IZQUIERDA
     CALL DIBUJAR_TEXTO_VRAM
-    CALL ESPERAR_TECLA_REDEFINIDA
+    CALL ESPERAR_TECLA_NUEVA
     LD A,$47
     EX AF,AF'
     LD A,(ULTIMA_TECLA_REDEFINIDA)
@@ -3484,7 +3545,7 @@ REDEFINIR_TECLA_DERECHA:
     LD HL,$4889
     LD DE,ETIQUETA_TECLA_DERECHA
     CALL DIBUJAR_TEXTO_VRAM
-    CALL ESPERAR_TECLA_REDEFINIDA
+    CALL ESPERAR_TECLA_NUEVA
     LD A,$47
     EX AF,AF'
     LD A,(ULTIMA_TECLA_REDEFINIDA)
@@ -3499,7 +3560,7 @@ REDEFINIR_TECLA_PAUSA:
     LD HL,$48C9
     LD DE,ETIQUETA_TECLA_PAUSA
     CALL DIBUJAR_TEXTO_VRAM
-    CALL ESPERAR_TECLA_REDEFINIDA
+    CALL ESPERAR_TECLA_NUEVA
     LD A,$47
     EX AF,AF'
     LD A,(ULTIMA_TECLA_REDEFINIDA)
@@ -3565,7 +3626,10 @@ INICIAR_REDEFINICION_TECLAS_BUCLE:
     INC HL
     DJNZ INICIAR_REDEFINICION_TECLAS_BUCLE
     RET
-ESPERAR_TECLA_REDEFINIDA:
+; --- ESPERAR_TECLA_NUEVA (antes ESPERAR_TECLA_REDEFINIDA): mismo
+; nombre EXACTO que MSX (sesion 56 continuacion 30) -- mismo rol,
+; esperar la nueva pulsacion durante la redefinicion de teclas. ---
+ESPERAR_TECLA_NUEVA:
     LD HL,(PUNTERO_ESCRITURA_REDEFINICION)
 ESPERAR_TECLA_REDEFINIDA_SOLTAR:
     XOR A
@@ -3604,7 +3668,7 @@ ESCANEAR_TECLA_REDEFINIDA_MASCARA:
     BIT 7,A
     JR Z,GUARDAR_TECLA_REDEFINIDA
     POP HL
-    JR ESPERAR_TECLA_REDEFINIDA
+    JR ESPERAR_TECLA_NUEVA
 GUARDAR_TECLA_REDEFINIDA:
     LD (ULTIMA_TECLA_REDEFINIDA),A
     SET 7,(HL)
@@ -3646,68 +3710,79 @@ GUARDAR_TECLA_REDEFINIDA:
     NOP
     NOP
     NOP
-DIBUJAR_CREDITOS_MENU:
+; --- DIBUJAR_CREDITOS (antes DIBUJAR_CREDITOS_MENU): mismo nombre
+; EXACTO que MSX (sesion 56 continuacion 31) -- misma secuencia
+; DE/HL/CALL DIBUJAR_TEXTO_VRAM por cada linea de creditos, mismo
+; orden (TITULO/PROGRAMADO_POR/NOMBRE_PROGRAMADOR/...). ---
+DIBUJAR_CREDITOS:
     CALL FINALIZAR_MENU_CONTROLES
-    LD DE,ETIQUETA_CREDITOS_TITULO
+    LD DE,TEXTO_CREDITOS_TITULO
     LD HL,$4049
     CALL DIBUJAR_TEXTO_VRAM
-    LD DE,ETIQUETA_CREDITOS_PROGRAMADOR
+    LD DE,TEXTO_CREDITOS_PROGRAMADO_POR
     LD HL,$40A4
     CALL DIBUJAR_TEXTO_VRAM
-    LD DE,ETIQUETA_CREDITOS_PROGRAMADOR_NOMBRE
+    LD DE,TEXTO_CREDITOS_NOMBRE_PROGRAMADOR
     LD HL,$40EC
 DIBUJAR_CREDITOS_MENU_L4:
     CALL DIBUJAR_TEXTO_VRAM
-    LD DE,ETIQUETA_CREDITOS_GRAFICOS
+    LD DE,TEXTO_CREDITOS_GRAFICOS_POR
     LD HL,$4824
 DIBUJAR_CREDITOS_MENU_L5:
     CALL DIBUJAR_TEXTO_VRAM
-    LD DE,ETIQUETA_CREDITOS_GRAFICOS_NOMBRE
+    LD DE,TEXTO_CREDITOS_NOMBRE_GRAFICOS
     LD HL,$486C
     CALL DIBUJAR_TEXTO_VRAM
-    LD DE,ETIQUETA_CREDITOS_MUSICA
+    LD DE,TEXTO_CREDITOS_MUSICA_POR
     LD HL,$48A4
     CALL DIBUJAR_TEXTO_VRAM
-    LD DE,ETIQUETA_CREDITOS_MUSICA_NOMBRE
+    LD DE,TEXTO_CREDITOS_NOMBRE_MUSICA
     LD HL,$48EC
     CALL DIBUJAR_TEXTO_VRAM
-    LD DE,ETIQUETA_CREDITOS_COPYRIGHT
+    LD DE,TEXTO_CREDITOS_TOPOSHOW
     LD HL,$5048
     JP DIBUJAR_TEXTO_VRAM
 ; Creditos del juego -- $8E30-$8EB2, un registro DIBUJAR_TEXTO_VRAM
-; por linea (longitud,atributo,texto). Volcado en hex (no como cadena)
-; porque el ultimo byte de ETIQUETA_CREDITOS_GRAFICOS_NOMBRE hace DOBLE
+; por linea (longitud,atributo,texto). NOMBRES ALINEADOS CON MSX
+; (sesion 56 continuacion 31): las 8 etiquetas (antes ETIQUETA_
+; CREDITOS_PROGRAMADOR/_NOMBRE, _GRAFICOS/_NOMBRE, _MUSICA/_NOMBRE,
+; _COPYRIGHT, _TITULO) contienen el MISMO contenido byte a byte que
+; TEXTO_CREDITOS_PROGRAMADO_POR/_NOMBRE_PROGRAMADOR/_GRAFICOS_POR/
+; _NOMBRE_GRAFICOS/_MUSICA_POR/_NOMBRE_MUSICA/_TOPOSHOW/_TITULO de MSX
+; (madmix_scr_body.asm:4221-4245) -- renombradas con los mismos
+; nombres EXACTOS. Volcado en hex (no como cadena)
+; porque el ultimo byte de TEXTO_CREDITOS_NOMBRE_GRAFICOS hace DOBLE
 ; USO: es su propio byte de control final Y, a la vez, el byte de
-; longitud de ETIQUETA_CREDITOS_MUSICA (llamadas independientes,
+; longitud de TEXTO_CREDITOS_MUSICA_POR (llamadas independientes,
 ; direcciones fijas -- no es un fallo, ahorra 1 byte). Dibujado por
-; DIBUJAR_CREDITOS_MENU (linea 1=ETIQUETA_CREDITOS_TITULO, ultima en
+; DIBUJAR_CREDITOS (linea 1=TEXTO_CREDITOS_TITULO, ultima en
 ; memoria pero PRIMERA en pantalla).
-ETIQUETA_CREDITOS_PROGRAMADOR: ; $8E30 -- "POGRAMADO BY:  "
+TEXTO_CREDITOS_PROGRAMADO_POR: ; $8E30 -- "POGRAMADO BY:  "
     DB $0F,$42,$50,$4F,$47,$52,$41,$4D,$41,$44,$4F,$20,$42,$59,$3A,$20
     DB $20,$20
-ETIQUETA_CREDITOS_PROGRAMADOR_NOMBRE: ; $8E42 -- "RAPHAEL GOMEZZZ"
+TEXTO_CREDITOS_NOMBRE_PROGRAMADOR: ; $8E42 -- "RAPHAEL GOMEZZZ"
     DB $0F,$47,$52,$41,$50,$48,$41,$45,$4C,$20,$47,$4F,$4D,$45,$5A,$5A
     DB $5A,$2E,$2E,$20
-ETIQUETA_CREDITOS_GRAFICOS:  ; $8E56 -- "GRAPHICOS BY "
+TEXTO_CREDITOS_GRAFICOS_POR:  ; $8E56 -- "GRAPHICOS BY "
     DB $0D,$42,$47,$52,$41,$50,$48,$49,$43,$4F,$53,$20,$42,$59,$20,$3A
     DB $20,$20
-ETIQUETA_CREDITOS_GRAFICOS_NOMBRE: ; $8E68 -- "ROBERTO P.ACEBES"+$0B (byte final = ATRIBUTO/LARGO de la sig. linea, reutilizado)
+TEXTO_CREDITOS_NOMBRE_GRAFICOS: ; $8E68 -- "ROBERTO P.ACEBES"+$0B (byte final = ATRIBUTO/LARGO de la sig. linea, reutilizado)
     DB $11,$47,$52,$4F,$42,$45,$52,$54,$4F,$20,$50,$2E,$41,$43,$45,$42
     DB $45,$53
-ETIQUETA_CREDITOS_MUSICA:    ; $8E7A -- "MUSIC-A BY:"
+TEXTO_CREDITOS_MUSICA_POR:    ; $8E7A -- "MUSIC-A BY:"
     DB $0B,$42,$4D,$55,$53,$49,$43,$2D,$41,$20,$42,$59,$3A
-ETIQUETA_CREDITOS_MUSICA_NOMBRE: ; $8E87 -- "COMILONAS"
+TEXTO_CREDITOS_NOMBRE_MUSICA: ; $8E87 -- "COMILONAS"
     DB $09,$47,$43,$4F,$4D,$49,$4C,$4F,$4E,$41,$53
-ETIQUETA_CREDITOS_COPYRIGHT: ; $8E92 -- "TOPOSHOW -1988-"
+TEXTO_CREDITOS_TOPOSHOW: ; $8E92 -- "TOPOSHOW -1988-"
     DB $0F,$04,$54,$4F,$50,$4F,$53,$48,$4F,$57,$20,$2D,$31,$39,$38,$38
     DB $2D
-ETIQUETA_CREDITOS_TITULO:    ; $8EA3 -- "MAD$MIX GAME"
+TEXTO_CREDITOS_TITULO:    ; $8EA3 -- "MAD$MIX GAME"
     DB $0C,$46,$4D,$41,$44,$24,$4D,$49,$58,$20,$47,$41,$4D,$45,$00,$00
 ; ==============================================================
 ;  INICIAR_DEMO (antes CODE_8EB3, $8EB3-$8F54, 162 bytes) -- RESUELTO
 ;  POR COMPLETO (sesion 56). Candidato de sesion 40/54 confirmado:
 ;  ciclador de niveles pregrabados para el modo demo/atraccion (opcion
-;  "5 DEMO" del menu de controles, SELECCIONAR_DEMO). Recorre
+;  "5 DEMO" del menu de controles, SELECCIONAR_OPCION_DEMO). Recorre
 ;  TABLA_PERFILES_DEMO (4 entradas: nivel 1, 2, 4 y 5 -- el 3 no tiene
 ;  perfil propio) cargando cada nivel con CARGAR_NIVEL y reproduciendo
 ;  un GUION DE ENTRADA PREGRABADO en vez de leer el teclado real --
@@ -3734,8 +3809,12 @@ ETIQUETA_CREDITOS_TITULO:    ; $8EA3 -- "MAD$MIX GAME"
 ;  $DBE0-$DD17, y el cuarto (nivel 5) apunta a $E380 -- EXACTAMENTE el
 ;  inicio del otro tramo marcado "guiones de cancion/SFX sin
 ;  decodificar" -- confirmando que al menos el principio de ESE tramo
-;  (E380-E3D7, 88 bytes) es TAMBIEN guion de demo, no musica. El resto
-;  de ese tramo ($E3D8-$EFB5) sigue sin disparador conocido.
+;  (E380-E3D7, 88 bytes) es TAMBIEN guion de demo, no musica. CERRADO
+;  sesion 56: el resto de ese tramo ($E3D8-$EFB5) tambien quedo
+;  identificado por completo -- 2 guiones de demo mas (E3D8-E3F1),
+;  el bitmap del marco decorativo (E3F2-EFA1) y relleno a cero
+;  (EFA2-EFB5). Ver cabecera de BITMAP_MARCO_DECORATIVO mas abajo. No
+;  queda ningun byte sin identificar entre $DBE0 y $EFB5.
 ; ==============================================================
 PUNTERO_GUION_DEMO EQU $8F44        ; 2 bytes -- puntero al par (umbral,direccion) activo
 CONTADOR_FRAME_DEMO EQU $8F46       ; 1 byte -- frames transcurridos desde el par activo
@@ -3799,7 +3878,7 @@ APLICAR_DIRECCION_DEMO:
     JP Z,SIGUIENTE_PERFIL_DEMO
     AND $1F
     LD D,A
-    CALL ENTRADA_MOTOR_MOVIMIENTO_COLISION
+    CALL ENLACE_MOTOR_MOVIMIENTO_COLISION
     CALL WAIT_VBLANK
     CALL ACTUALIZAR_PARPADEO_BOLA
     LD B,$FE
@@ -3826,13 +3905,13 @@ ABORTAR_DEMO:
     DB $00,$FC                      ; sin consumidor confirmado
     ; TABLA_PERFILES_DEMO (EQU declarada arriba) empieza aqui:
     DB 1                            ; nivel 1
-    DW $DBE0                        ; guion en $DBE0 (ver GUION_DEMO_NIVEL_1)
+    DW $DBE0                        ; guion en $DBE0 (ver GUION_DEMO_NIVEL1)
     DB 2                            ; nivel 2
-    DW $DC20                        ; guion en $DC20 (ver GUION_DEMO_NIVEL_2)
+    DW $DC20                        ; guion en $DC20 (ver GUION_DEMO_NIVEL2)
     DB 4                            ; nivel 4
-    DW $DC90                        ; guion en $DC90 (ver GUION_DEMO_NIVEL_4)
+    DW $DC90                        ; guion en $DC90 (ver GUION_DEMO_NIVEL4)
     DB 5                            ; nivel 5
-    DW $E380                        ; guion en $E380 (ver GUION_DEMO_NIVEL_5, dentro del otro tramo de datos)
+    DW $E380                        ; guion en $E380 (ver GUION_DEMO_NIVEL5, dentro del otro tramo de datos)
 ; ==============================================================
 ;  SUBSISTEMA DE EFECTOS DE SONIDO CORTOS -- RESUELTO POR COMPLETO
 ;  (sesion 56). TERCER subsistema de sonido del juego, distinto tanto
@@ -4348,7 +4427,7 @@ CALCULAR_FILA_RELATIVA_CAMARA:
 DESCARTAR_ACTOR_FUERA_RANGO:
     POP HL
     POP AF
-    JP FIN_MOTOR_ACTORES
+    JP SALIR_MOTOR_ACTORES
 APLICAR_DESPLAZAMIENTO_FILA:
     LD H,$00
     ADD HL,BC
@@ -4461,7 +4540,7 @@ ESCRIBIR_FILA_ACTOR:
     LD SP,($91CC)
     LD ($91CA),HL
     EI
-    JP FIN_MOTOR_ACTORES
+    JP SALIR_MOTOR_ACTORES
 ; ENTRADA_DESPLAZAR_DERECHA ($9343) -- destino REAL de "JP (IY)" en
 ; BUCLE_FILA_ACTOR cuando IY=$9343 (caso normal, sin voltear), fijado
 ; en PREPARAR_DESPACHO_DESPLAZAMIENTO -- sin llamador visible por CALL/
@@ -4646,7 +4725,7 @@ BUCLE_INVERTIR_BITS_BYTE:
     EX DE,HL
     POP BC
     DJNZ BUCLE_VOLTEAR_FILA
-    JR FIN_MOTOR_ACTORES
+    JR SALIR_MOTOR_ACTORES
 CALCULAR_LIMITE_INTERCAMBIO:
     PUSH AF
     PUSH HL
@@ -4674,7 +4753,7 @@ COMPROBAR_INTERCAMBIO_NECESARIO:
     JR NZ,BUCLE_INTERCAMBIAR_DATOS
     LD A,E
     XOR L
-    JR Z,FIN_MOTOR_ACTORES
+    JR Z,SALIR_MOTOR_ACTORES
 BUCLE_INTERCAMBIAR_DATOS:
     PUSH HL
     LD B,C
@@ -4694,7 +4773,10 @@ INTERCAMBIAR_BYTE:
     LD A,E
     XOR L
     JR NZ,COMPROBAR_INTERCAMBIO_NECESARIO
-FIN_MOTOR_ACTORES:
+; --- SALIR_MOTOR_ACTORES (antes FIN_MOTOR_ACTORES): mismo nombre
+; EXACTO que MSX (sesion 56 continuacion 30) -- mismo epilogo
+; (POP BC/DE/HL/AF + RET), identico. ---
+SALIR_MOTOR_ACTORES:
     POP BC
     POP DE
     POP HL
@@ -5964,8 +6046,8 @@ DIBUJAR_MARCADOR_PUNTOS:
 ; --- DIBUJAR_TEXTO_MARCADOR (antes CODE_9A30): RESUELTA sesion 56.
 ; Cola comun de las 3 ramas de DIBUJAR_MARCADOR_PUNTOS -- decidido ya
 ; que IX apunta a la etiqueta a pintar (digitos de puntuacion en
-; BUFFER_TEXTO_PUNTUACION, ETIQUETA_PUNTUACION_MAXIMA "BESTIA" o
-; ETIQUETA_PUNTUACION_DEMO " DEMO "), aqui se fija la posicion fija de
+; BUFFER_DIGITOS_PUNTUACION, TEXTO_BESTIA "BESTIA" o
+; TEXTO_DEMO " DEMO "), aqui se fija la posicion fija de
 ; pantalla del marcador (B=$B0=Y176, C=$B0->columna 22, formula de
 ; CALCULAR_DIRECCION_PANTALLA) y se llama a DIBUJAR_CADENA_VRAM (rutina
 ; de dibujo de cadena en VRAM, hermana de ESCRIBIR_PATRON_VRAM pero para
@@ -5982,7 +6064,7 @@ DIBUJAR_TEXTO_MARCADOR:
     RET
 ; --- CONVERTIR_PUNTUACION_A_TEXTO (antes CODE_9A3E): RESUELTA sesion
 ; 56. Convierte el valor binario de HL (la puntuacion) en digitos ASCII
-; escritos en el buffer apuntado por DE ($9A7B, BUFFER_TEXTO_PUNTUACION)
+; escritos en el buffer apuntado por DE ($9A7B, BUFFER_DIGITOS_PUNTUACION)
 ; mediante division por resta repetida contra TABLA_VALORES_DECIMAL_
 ; PUNTUACION (1000,100,10). Guarda la direccion del buffer en el par DE
 ; sombra (EXX) como puntero de escritura fijo, mientras el DE primario
@@ -6052,24 +6134,30 @@ ESCRIBIR_DIGITO_PUNTUACION:
 ;    por resta repetida; leida por BUCLE_CONVERTIR_PUNTUACION, que se
 ;    detiene al llegar precisamente al divisor 10 (el propio valor 10
 ;    hace doble uso de centinela de fin de tabla).
-;  - BUFFER_TEXTO_PUNTUACION ($9A7B, 6 bytes "000000" + $FF) -- donde
+;  - BUFFER_DIGITOS_PUNTUACION ($9A7B, 6 bytes "000000" + $FF) -- donde
 ;    se escriben los digitos formateados, despues dibujado en pantalla
 ;    con la MISMA rutina de patrones de fuente que ESCRIBIR_PATRON_VRAM
 ;    (indices de caracter, no ASCII estandar, aunque coinciden con
 ;    ASCII en el rango de digitos y letras usado aqui).
-;  - ETIQUETA_PUNTUACION_MAXIMA ($9A82, "BESTIA"+$FF) -- se dibuja en
+;  - TEXTO_BESTIA ($9A82, "BESTIA"+$FF) -- se dibuja en
 ;    vez del marcador cuando la puntuacion alcanza el limite ($2710=
 ;    10000) en vez de seguir formateando digitos.
-;  - ETIQUETA_PUNTUACION_DEMO ($9A89, " DEMO "+$FF) -- se dibuja en vez
+;  - TEXTO_DEMO ($9A89, " DEMO "+$FF) -- se dibuja en vez
 ;    del marcador mientras el ciclador de demo esta activo
 ;    (INDICE_CICLO_NIVELES != 0).
+;
+; NOMBRES ALINEADOS CON MSX (sesion 56 continuacion 31): BUFFER_
+; DIGITOS_PUNTUACION (antes BUFFER_TEXTO_PUNTUACION), TEXTO_BESTIA
+; (antes ETIQUETA_PUNTUACION_MAXIMA) y TEXTO_DEMO (antes ETIQUETA_
+; PUNTUACION_DEMO) -- MSX tiene el MISMO contenido byte a byte con
+; esos mismos nombres exactos (madmix1_body.asm:2188-2193).
 TABLA_VALORES_DECIMAL_PUNTUACION:
     DW 1000,100,10
-BUFFER_TEXTO_PUNTUACION:
+BUFFER_DIGITOS_PUNTUACION:
     DB $30,$30,$30,$30,$30,$30,$FF
-ETIQUETA_PUNTUACION_MAXIMA:
+TEXTO_BESTIA:
     DB $42,$45,$53,$54,$49,$41,$FF        ; "BESTIA"
-ETIQUETA_PUNTUACION_DEMO:
+TEXTO_DEMO:
     DB $20,$44,$45,$4D,$4F,$20,$FF        ; " DEMO "
 ; --- DIBUJAR_CADENA_VRAM (antes CODE_9A90): RESUELTA sesion 56.
 ; Hermana de ESCRIBIR_PATRON_VRAM pero para una cadena completa: IX
@@ -6636,7 +6724,14 @@ REINICIAR_ESTADO_NIVEL:
 ; --- GUARDAR_SELECTOR_SPRITE_INICIAL (antes CODE_9CA6): RESUELTA
 ; sesion 56. Convergencia de las 2 ramas de arriba (A=$0E si
 ; MODO_ESPECIAL=3, si no A=0) antes de guardar el selector de sprite
-; inicial del comecocos. ---
+; inicial del comecocos. CORREGIDO sesion 56 continuacion 30: por un
+; momento se renombro a GUARDAR_SELECTOR_SPRITE_COMECOCOS por similitud
+; con MSX, pero ese nombre ya lo tiene, con razon, la convergencia de
+; ENLACE_MOTOR_MOVIMIENTO_COLISION/PREPARAR_SCROLL mas arriba (mismo
+; patron EXACTO -- bit7/centinela -- que el GUARDAR_SELECTOR_SPRITE_
+; COMECOCOS real de MSX); esta de aqui es una convergencia DISTINTA
+; (inicializacion de nivel, no lectura de entrada), asi que se
+; mantiene con nombre propio para no chocar. ---
 GUARDAR_SELECTOR_SPRITE_INICIAL:
     LD (SELECTOR_SPRITE_COMECOCOS),A
     XOR A
@@ -6655,14 +6750,14 @@ GUARDAR_SELECTOR_SPRITE_INICIAL:
 ; --- BUSCAR_COLUMNA_HUD (antes CODE_9CCB): RESUELTA sesion 56, mismo
 ; nombre EXACTO que MSX (equivalente confirmado: MSX describe esta
 ; misma fase como "animacion de busqueda del HUD", ver comentario de
-; INICIO mas arriba). Bucle que llama a ENTRADA_MOTOR_MOVIMIENTO_COLISION
+; INICIO mas arriba). Bucle que llama a ENLACE_MOTOR_MOVIMIENTO_COLISION
 ; y espera VBLANK en cada vuelta hasta que C (icono buscado, AND $78)
 ; coincide con el byte leido -- animacion de "recorrer" el HUD hasta
 ; encontrar la columna correcta. ---
 BUSCAR_COLUMNA_HUD:
     PUSH BC
     PUSH HL
-    CALL ENTRADA_MOTOR_MOVIMIENTO_COLISION
+    CALL ENLACE_MOTOR_MOVIMIENTO_COLISION
     POP HL
     POP BC
     LD A,C
@@ -6702,7 +6797,7 @@ BUSCAR_COLUMNA_HUD:
     LD (TEMPORIZADOR_PARPADEO_BOLA),A
 ; --- BUCLE_PRINCIPAL_JUEGO: CONFIRMADO (sesion 34), mismo nombre
 ; EXACTO que en MSX (madmix1_body.asm, $9078). Abre con "leer entrada
-; (ENTRADA_MOTOR_MOVIMIENTO_COLISION -> MOTOR_MOVIMIENTO_COLISION -> LEER_ENTRADA) + esperar VBLANK", el
+; (ENLACE_MOTOR_MOVIMIENTO_COLISION -> MOTOR_MOVIMIENTO_COLISION -> LEER_ENTRADA) + esperar VBLANK", el
 ; patron clasico de un bucle de juego por fotograma, y se reentra
 ; ciclicamente via JP BUCLE_PRINCIPAL_JUEGO (ver mas abajo). Estructura
 ; PRACTICAMENTE IDENTICA a MSX instruccion a instruccion: comprueba
@@ -6723,7 +6818,7 @@ BUSCAR_COLUMNA_HUD:
 ; tambien la pregunta pendiente desde sesion 26 ("falta verificar que
 ; se reentra ciclicamente"). ---
 BUCLE_PRINCIPAL_JUEGO:
-    CALL ENTRADA_MOTOR_MOVIMIENTO_COLISION
+    CALL ENLACE_MOTOR_MOVIMIENTO_COLISION
     CALL WAIT_VBLANK
     LD HL,MODO_ESPECIAL_ACTIVO
     LD A,(HL)
@@ -6799,9 +6894,12 @@ VERIFICAR_ENTRADA:
     JR Z,CONTINUAR_BUCLE_PRINCIPAL
     EI
     LD B,$32
-BUCLE_ESPERA_PAUSA:
+; --- BUCLE_PAUSA (antes BUCLE_ESPERA_PAUSA): mismo nombre EXACTO que
+; MSX (sesion 56 continuacion 31) -- ambas son "HALT/DJNZ", pausa fija
+; de 50 frames tras detectar la tecla de pausa. ---
+BUCLE_PAUSA:
     HALT
-    DJNZ BUCLE_ESPERA_PAUSA
+    DJNZ BUCLE_PAUSA
 ESPERAR_TECLA_REANUDAR:
     XOR A
     CALL LEER_ENTRADA
@@ -7422,8 +7520,11 @@ GRAFICOS_LOSETAS:
 ;  payload de portada, $EA60-$EFB5. Sesion 51: $D160-$DBDF
 ;  RESUELTOS (CUERPO_L11-L14, ver abajo). Sesion 55: $E038-$E37F
 ;  RESUELTO POR COMPLETO (motor de sonido, ver su propia cabecera
-;  mas abajo); el resto ($DBE0-$E037 y $E380-$EFB5) sigue como
-;  datos sin desensamblar en detalle (guiones de cancion/SFX).
+;  mas abajo). CERRADO sesion 56: $DBE0-$E037 (guiones de demo +
+;  49 fragmentos de cancion/SFX) y $E380-$EFB5 (mas guiones de demo +
+;  bitmap del marco decorativo + relleno) tambien identificados por
+;  completo -- no queda ningun byte sin identificar en todo el rango
+;  $D160-$EFB5.
 ; ==============================================================
 CUERPO_L11:  ; $D160, 672 bytes -- nivel 11. RESUELTOS POR COMPLETO
 ; (sesion 51) los 4 cuerpos de nivel restantes (11-14) que TABLA_NIVELES
@@ -7450,19 +7551,26 @@ CUERPO_L14:  ; $D900, 736 bytes -- nivel 14. Localizado por aritmetica de
 ; $E380, fuera de este bloque) mas 4 guiones "huerfanos" con el mismo
 ; formato pero sin indice conocido que los referencie (candidato:
 ; tomas descartadas/version antigua del ciclo de demo).
-GUION_DEMO_NIVEL_1:          ; $DBE0, nivel 1 -- TABLA_PERFILES_DEMO entrada 0
+;
+; NOMBRES ALINEADOS CON MSX (sesion 56 continuacion 30): MSX tiene el
+; MISMO fenomeno exacto (madmix1_body.asm ~4544) con los MISMOS
+; nombres -- GUION_DEMO_NIVEL1/2/4/5 (sin guion bajo antes del numero,
+; antes GUION_DEMO_NIVEL_1/2/4/5 aqui) y GUION_DEMO_SINREF_1-6 (antes
+; GUION_DEMO_EXTRA_1-6 aqui -- MSX tambien tiene 6 "huerfanos", mismo
+; termino "SINREF" = sin referencia conocida, mas preciso que "EXTRA").
+GUION_DEMO_NIVEL1:          ; $DBE0, nivel 1 -- TABLA_PERFILES_DEMO entrada 0
     INCBIN "data/sound/demo/00_guion_demo_nivel1_dbe0.bin"
-GUION_DEMO_NIVEL_2:          ; $DC20, nivel 2 -- TABLA_PERFILES_DEMO entrada 1
+GUION_DEMO_NIVEL2:          ; $DC20, nivel 2 -- TABLA_PERFILES_DEMO entrada 1
     INCBIN "data/sound/demo/01_guion_demo_nivel2_dc20.bin"
-GUION_DEMO_EXTRA_1:          ; $DC7E, sin indice conocido en TABLA_PERFILES_DEMO
+GUION_DEMO_SINREF_1:          ; $DC7E, sin indice conocido en TABLA_PERFILES_DEMO
     INCBIN "data/sound/demo/02_guion_demo_extra_dc7e.bin"
-GUION_DEMO_NIVEL_4:          ; $DC90, nivel 4 -- TABLA_PERFILES_DEMO entrada 2
+GUION_DEMO_NIVEL4:          ; $DC90, nivel 4 -- TABLA_PERFILES_DEMO entrada 2
     INCBIN "data/sound/demo/03_guion_demo_nivel4_dc90.bin"
-GUION_DEMO_EXTRA_2:          ; $DCD2, sin indice conocido en TABLA_PERFILES_DEMO
+GUION_DEMO_SINREF_2:          ; $DCD2, sin indice conocido en TABLA_PERFILES_DEMO
     INCBIN "data/sound/demo/04_guion_demo_extra_dcd2.bin"
-GUION_DEMO_EXTRA_3:          ; $DCD6, sin indice conocido en TABLA_PERFILES_DEMO
+GUION_DEMO_SINREF_3:          ; $DCD6, sin indice conocido en TABLA_PERFILES_DEMO
     INCBIN "data/sound/demo/05_guion_demo_extra_dcd6.bin"
-GUION_DEMO_EXTRA_4:          ; $DCEE, sin indice conocido en TABLA_PERFILES_DEMO
+GUION_DEMO_SINREF_4:          ; $DCEE, sin indice conocido en TABLA_PERFILES_DEMO
     INCBIN "data/sound/demo/06_guion_demo_extra_dcee.bin"
 ; $DD00-$DD17 (24 bytes): relleno a cero antes del motor de musica.
     DB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -7538,11 +7646,12 @@ GUION_DEMO_EXTRA_4:          ; $DCEE, sin indice conocido en TABLA_PERFILES_DEMO
 ;  prologo DI/PUSH en $E038 solo demostraba que el tramo EMPEZABA con
 ;  codigo real, no que los 3966 bytes completos ($E038-$EFB5) lo
 ;  fueran. En realidad el motor real ocupa solo estos 840 bytes
-;  ($E038-$E37F); el resto ($E380-$EFB5, ~3586 bytes) es MAS DATOS
-;  -- guiones de cancion/SFX concatenados, mismo formato y estilo de
-;  bytes que $DBE0-$E037 (ya delimitado sesion 53). Sigue como DB
-;  crudo mas abajo, sin decodificar cancion por cancion (ver
-;  FINDINGS.md sesion 55 para el porque).
+;  ($E038-$E37F); el resto ($E380-$EFB5, ~3586 bytes) es MAS DATOS,
+;  pero NO todo son guiones de cancion/SFX como se penso al principio:
+;  CERRADO sesion 56 -- de esos ~3586 bytes, 114 son mas guiones de
+;  demo (ver GUION_DEMO_NIVEL5/EXTRA_5/EXTRA_6 mas abajo) y 3012 son
+;  el bitmap del marco decorativo (BITMAP_MARCO_DECORATIVO) + relleno
+;  final. No queda ningun byte de este tramo sin identificar.
 ;
 ;  ARQUITECTURA (motor de 2 "canales" dirigido por interrupcion,
 ;  tipico de reproductores de altavoz en Spectrum 48K):
@@ -7980,32 +8089,33 @@ PILA_CANAL_B_MEM:                     ; $E36E, 18 bytes -- espacio de pila real 
     DB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
     DB $00,$00
 ; $E380 -- fin del motor de sonido. $E380-$E3D7 (88 B) RESUELTO en
-; sesion 56: GUION_DEMO_NIVEL_5, el cuarto guion de TABLA_PERFILES_DEMO
+; sesion 56: GUION_DEMO_NIVEL5, el cuarto guion de TABLA_PERFILES_DEMO
 ; (ver cabecera de INICIAR_DEMO/$DBE0 mas arriba) -- confirma que
 ; TABLA_PERFILES_DEMO no vive toda en $DBE0-$DD17, este ultimo guion
-; se coloco aparte. El resto de este tramo ($E3D8-$EFB5) sigue sin
-; disparador conocido -- candidato a mas guiones de demo o de cancion,
-; sin confirmar cual de los dos. Sin equivalente MSX.
-GUION_DEMO_NIVEL_5:          ; $E380, nivel 5 -- TABLA_PERFILES_DEMO entrada 3 (sesion 56)
+; se coloco aparte. CERRADO sesion 56: el resto de este tramo
+; ($E3D8-$EFB5) tambien quedo identificado por completo -- ver los 3
+; bloques siguientes (2 guiones de demo mas, el bitmap del marco
+; decorativo, y relleno a cero). Sin equivalente MSX.
+GUION_DEMO_NIVEL5:          ; $E380, nivel 5 -- TABLA_PERFILES_DEMO entrada 3 (sesion 56)
     INCBIN "data/sound/demo/07_guion_demo_nivel5_e380.bin"
 ; $E3D8-$E3F1 (26 bytes): sesion 56 -- misma cadena de razonamiento
-; que confirmo GUION_DEMO_NIVEL_5 justo arriba: la extraccion de ESE
+; que confirmo GUION_DEMO_NIVEL5 justo arriba: la extraccion de ESE
 ; guion (88 bytes, $E380-$E3D7) termina en un par (umbral,direccion)
 ; $01,$00,$FF,$FF -- un terminador limpio y genuino, no un corte
 ; arbitrario -- así que estos 26 bytes que le siguen son una zona
 ; aparte. Decodifican, con el MISMO formato ya confirmado por el
 ; consumidor real de INICIAR_DEMO (par umbral/direccion terminado en
 ; direccion=$FF), como 2 guiones cortos mas, ambos con su propio
-; terminador limpio. PERO, igual que GUION_DEMO_EXTRA_1-4: ningun
+; terminador limpio. PERO, igual que GUION_DEMO_SINREF_1-4: ningun
 ; indice de TABLA_PERFILES_DEMO apunta aqui (sus 4 entradas -- niveles
 ; 1/2/4/5 -- ya estan localizadas por completo), asi que NO hay
 ; ejecucion real confirmada que los lea -- candidato razonable
 ; (formato + terminador limpio coinciden con los guiones confirmados),
 ; no confirmado por un llamador real. Etiquetados igual que
-; GUION_DEMO_EXTRA_1-4 por coherencia.
-GUION_DEMO_EXTRA_5:          ; $E3D8, sin indice conocido en TABLA_PERFILES_DEMO
+; GUION_DEMO_SINREF_1-4 por coherencia.
+GUION_DEMO_SINREF_5:          ; $E3D8, sin indice conocido en TABLA_PERFILES_DEMO
     INCBIN "data/sound/demo/08_guion_demo_extra_e3d8.bin"
-GUION_DEMO_EXTRA_6:          ; $E3DE, sin indice conocido en TABLA_PERFILES_DEMO
+GUION_DEMO_SINREF_6:          ; $E3DE, sin indice conocido en TABLA_PERFILES_DEMO
     INCBIN "data/sound/demo/09_guion_demo_extra_e3de.bin"
 ; $E3F2 -- RESUELTO POR COMPLETO sesion 56 (CORRIGE el hallazgo
 ; anterior de la misma sesion, "189 guiones de musica huerfanos" --
