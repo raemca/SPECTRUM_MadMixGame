@@ -23,23 +23,39 @@ documentado hasta entonces para ese segmento. Lo usan
 GESTIONAR_SCROLL, REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM,
 REDIBUJAR_LOSETA_BUFFER_VRAM (y por tanto tambien DIBUJAR_CAMBIO_LOSETA,
 que llama a esta ultima) -- equivalente real al lienzo de MSX.
-CONFIRMADO tambien que MOTOR_ACTORES/DIBUJAR_ACTORES_PENDIENTES NO
-necesitan un buffer de render de actores separado (a diferencia de
-MSX, $0500-$1000): MOTOR_ACTORES calcula la direccion de pantalla
-REAL con CALCULAR_DIRECCION_PANTALLA y la guarda en el registro del
-actor; DIBUJAR_ACTORES_PENDIENTES compone el sprite directamente
-sobre esa direccion real, sin paso intermedio -- tiene sentido, dado
-que aqui la pantalla esta mapeada en memoria y no hace falta el paso
-extra que si necesita el VDP de MSX.
+CORREGIDO (misma sesion): una conclusion anterior decia que
+MOTOR_ACTORES/DIBUJAR_ACTORES_PENDIENTES NO necesitaban un buffer de
+render de actores separado. ERA INCOMPLETA -- SI existe, solo que
+dinamico: MOTOR_ACTORES calcula la direccion de pantalla REAL con
+CALCULAR_DIRECCION_PANTALLA (registro del actor, offset+2/+3) pero
+ADEMAS compone el sprite ya volteado/desplazado a nivel de sub-pixel
+en un buffer de trabajo en RAM (bump-allocator: puntero en $91CA,
+reiniciado a $F701 cada frame, avanzando ~144 bytes por actor),
+guardando ese puntero en el registro del actor (offset+5/+6).
+DIBUJAR_ACTORES_PENDIENTES lee DESDE ese buffer pre-renderizado (no
+desde PTR_TABLA_SPRITES directamente) y compone AND/OR sobre la
+direccion real. Analogo real al buffer de MSX ($0500-$1000), solo
+que dinamico y dentro de la misma zona reciclada que el lienzo del
+laberinto ($F701 cae dentro de $EFA2-$F88C).
 
-PENDIENTE (sin resolver pese a busqueda exhaustiva, ver FINDINGS.md):
-el mecanismo que vuelca ese lienzo lineal a la pantalla real
-entrelazada no se ha localizado -- se comprobaron los 5 llamadores de
-CALCULAR_DIRECCION_PANTALLA (todos HUD/texto/iconos, ninguno vuelca
-el laberinto), el cuerpo completo de WAIT_VBLANK y
-TICK_REDIBUJADO_VBLANK, y que el operando "$E404" de estas
-instrucciones no se automodifica en ningun sitio. Candidato para una
-sesion futura con mas herramientas (emulador con video real).
+RESUELTO (misma sesion, tirando del hilo): el mecanismo que vuelca el
+LIENZO DEL LABERINTO a pantalla real es BUCLE_MEZCLA_ESQUEMA_COLOR
+(dentro de REFRESCAR_ESQUEMA_COLOR_NIVEL, $95FB, llamada cada VBLANK
+relevante via TICK_REDIBUJADO_VBLANK). Una caracterizacion previa de
+esa misma rutina (de una sesion anterior a esta) decia "IDEMPOTENTE,
+toca un pequeño conjunto fijo de bytes -- candidato a parpadeo
+puntual de 1-2 celdas del HUD": estaba INCOMPLETA porque solo se
+habia probado con el lienzo vacio/sin datos de nivel reales. Con un
+nivel real cargado primero (CARGAR_NIVEL real, no datos sueltos),
+la MISMA rutina escribe 3456 direcciones de pantalla real (144 de
+las 192 lineas de pixel, $4044-$577B -- exactamente el area jugable,
+sin el marco decorativo), estable fotograma a fotograma, y el
+contenido resultante en pantalla real coincide BYTE A BYTE con el
+contenido del lienzo en ese momento. El algoritmo exacto (una cadena
+de nodos de 10 bytes recorrida con SP redirigido via PUSH/POP,
+alternando banco de registros con EXX) no se ha derivado instruccion
+a instruccion -- confirmado solo por su efecto observado, mismo
+enfoque que el resto de este fichero.
 
 Uso:
   py tools/mmcanvas_sim.py
@@ -59,6 +75,14 @@ MEM_BASE = 0x6000
 CARGAR_MARCO_DECORATIVO = 0x915A
 REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM = 0x9904
 REDIBUJAR_LOSETA_BUFFER_VRAM = 0x99BD
+MOTOR_ACTORES = 0x91D0
+RESET_CONTADOR_ACTORES = 0x9670
+CARGAR_NIVEL = 0x883B
+PREPARAR_TABLA_ESQUEMA_COLOR = 0x954E
+REFRESCAR_ESQUEMA_COLOR_NIVEL = 0x95B0
+NIVEL_ACTUAL = 0x601B
+REGISTRO_NIVEL_ICONO_HUD = 0x6018
+COLOR_ACTUAL = 0x6037
 REGISTRO_NIVEL_POSICION_COMECOCOS = 0x6016
 
 
@@ -362,6 +386,10 @@ class CPU:
                 self.setZ(r == 0); self.setS(bool(r & 0x80)); self.t += 8
             elif op2 == 0x47: self.I = self.A; self.t += 9
             elif op2 == 0x57: self.A = self.I; self.t += 9
+            elif op2 == 0x4F: self.R = getattr(self, 'R', 0); self.t += 9  # LD R,A -- ignorado
+            elif op2 == 0x5F:
+                self.R = (getattr(self, 'R', 0) + 1) & 0x7F
+                self.A = self.R; self.t += 9  # LD A,R -- aproximado (contador, no timing real)
             elif op2 in (0x46, 0x56, 0x5E): self.t += 8
             elif op2 in (0x4D, 0x45): self.PC = self.pop(); self.t += 14
             elif (op2 & 0xC7) == 0x42:
@@ -529,12 +557,50 @@ def main():
     print(f"\nREDIBUJAR_LOSETA_BUFFER_VRAM: {steps3} pasos ejecutados")
     summarize(cpu3, "REDIBUJAR_LOSETA_BUFFER_VRAM")
 
+    # test 4: MOTOR_ACTORES para un actor de prueba -- confirma el
+    # buffer de render de actores (bump-allocator en $F701+)
+    cpu4 = fresh_cpu()
+    run_sub(cpu4, RESET_CONTADOR_ACTORES)
+    cpu4.trace_writes = True
+    cpu4.B = 0x00; cpu4.D = 0x40; cpu4.E = 0x30
+    steps4 = run_sub(cpu4, MOTOR_ACTORES)
+    print(f"\nMOTOR_ACTORES (1 actor, tras RESET_CONTADOR_ACTORES): {steps4} pasos ejecutados")
+    summarize(cpu4, "MOTOR_ACTORES")
+    print(f"  puntero de buffer de actores tras la llamada ($91CA): ${cpu4.rw(0x91CA):04X}")
+
+    # test 5: el volcado real -- carga un nivel de verdad, "ensucia" el
+    # lienzo con REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM, y comprueba que
+    # REFRESCAR_ESQUEMA_COLOR_NIVEL (BUCLE_MEZCLA_ESQUEMA_COLOR) SI vuelca
+    # ese contenido a pantalla real -- a diferencia de la caracterizacion
+    # previa (probada solo con el lienzo vacio, ver docstring)
+    cpu5 = fresh_cpu()
+    cpu5.mem[NIVEL_ACTUAL] = 1
+    run_sub(cpu5, PREPARAR_TABLA_ESQUEMA_COLOR)
+    run_sub(cpu5, CARGAR_NIVEL)
+    run_sub(cpu5, REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM)
+    canvas_snapshot = bytes(cpu5.mem[0xE404:0xE404 + 16])
+    cpu5.mem[REGISTRO_NIVEL_ICONO_HUD] = 0x07
+    cpu5.mem[COLOR_ACTUAL] = 0x42
+    cpu5.trace_writes = True
+    steps5 = run_sub(cpu5, REFRESCAR_ESQUEMA_COLOR_NIVEL, max_steps=5_000_000)
+    screen_addrs = sorted(set(a for _pc, a, _v in cpu5.write_log if 0x4000 <= a < 0x5800))
+    screen_sample = bytes(cpu5.mem[0x4044:0x4044 + 16])
+    print(f"\nREFRESCAR_ESQUEMA_COLOR_NIVEL (nivel 1 REAL cargado antes): {steps5} pasos ejecutados")
+    print(f"  direcciones distintas de pantalla real tocadas: {len(screen_addrs)} "
+          f"(rango ${screen_addrs[0]:04X}-${screen_addrs[-1]:04X})")
+    print(f"  primeros 16 bytes del lienzo ($E404):  {canvas_snapshot.hex(' ')}")
+    print(f"  primeros 16 bytes de pantalla ($4044): {screen_sample.hex(' ')}")
+    print(f"  coinciden byte a byte: {canvas_snapshot == screen_sample}")
+
     print("\n" + "=" * 70)
     print("CONCLUSION: el laberinto se compone en un lienzo de RAM ajeno a")
-    print("la pantalla real (ver docstring de este fichero) -- solo el HUD/")
-    print("iconos escriben en pantalla real dentro de estas rutinas.")
-    print("El volcado del lienzo a pantalla real NO se ha localizado (ver")
-    print("PENDIENTE en el docstring).")
+    print("la pantalla real (tests 1-3) -- solo el HUD/iconos escriben en")
+    print("pantalla real dentro de esas rutinas. El volcado del lienzo a")
+    print("pantalla real lo hace REFRESCAR_ESQUEMA_COLOR_NIVEL/")
+    print("BUCLE_MEZCLA_ESQUEMA_COLOR (test 5), llamada cada VBLANK relevante")
+    print("via TICK_REDIBUJADO_VBLANK -- ver docstring para el detalle.")
+    print("Los ACTORES tienen su propio buffer de render aparte (bump-")
+    print("allocator en $F701+, test 4) -- equivalente real al de MSX.")
 
 
 if __name__ == "__main__":

@@ -6947,3 +6947,123 @@ segmentos: 66 (antes 67, al fusionar 2 en 1).
 
 No aplica verificación de `.tzx` (investigación + documentación +
 herramienta nueva, ningún fichero fuente de `src/` tocado).
+
+## Sesión 56 (continuación 37) — CORRECCIÓN: sí hay un buffer de render de actores (la continuación 36 se equivocó)
+
+Petición del usuario: seguir buscando el mecanismo de volcado del
+lienzo del laberinto, con la pista de que "debe haber una rutina que
+explícitamente empieza a escribir en $4000 con origen el lienzo".
+
+Repasando `MOTOR_ACTORES` de arriba abajo (la mitad central,
+`$91FD-$9467`, no se había leído línea a línea en la continuación
+36) apareció un mecanismo que la continuación 36 pasó por alto:
+además de calcular la dirección de pantalla real con
+`CALCULAR_DIRECCION_PANTALLA` (registro del actor, offset+2/+3, esto
+sí estaba bien), `MOTOR_ACTORES` **compone el sprite ya volteado y
+desplazado a nivel de sub-píxel (0-7) en un buffer de trabajo en
+RAM**, vía `BUCLE_FILA_ACTOR`/`ESCRIBIR_FILA_ACTOR`/
+`ENTRADA_DESPLAZAR_DERECHA`/`IZQUIERDA`/`COMPONER_CELDA_DERECHA`/
+`IZQUIERDA` — un bump-allocator: `$91CA` guarda el puntero de
+escritura actual, reiniciado a `$F701` cada frame (cuando el
+contador de actores `$91C9` está a 0) y avanzando según cuántas
+filas tenga el sprite. Ese puntero se guarda en el registro del
+actor (offset+5/+6) — y `DIBUJAR_ACTORES_PENDIENTES` (ya lo había
+leído bien en la continuación 36) lee DESDE ahí, no desde
+`PTR_TABLA_SPRITES` directamente, y compone AND/OR sobre la
+dirección real (offset+2/+3).
+
+**CONFIRMADO por simulación** (`tools/mmcanvas_sim.py`, ampliado con
+`LD A,R`/`LD R,A`): llamando a `RESET_CONTADOR_ACTORES` +
+`MOTOR_ACTORES` para un actor de prueba, escribió 144 direcciones
+distintas en `$F701-$F790` — ni una sola en pantalla real.
+
+Es decir: SÍ hay un equivalente real al "buffer de render de
+actores" que MSX tiene en `$0500-$1000` — la conclusión de la
+continuación 36 ("Spectrum NO necesita buffer de actores") era
+**incorrecta**, específicamente por no haber leído esa sección
+central de `MOTOR_ACTORES`. La diferencia real con MSX no es "con
+buffer vs. sin buffer", sino "rango fijo separado (MSX) vs.
+bump-allocator dinámico dentro de la misma zona reciclada que el
+lienzo del laberinto (Spectrum, `$F701` cae dentro de
+`$EFA2-$F88C`)".
+
+**Sigue sin resolverse** (esta era la pregunta original): el volcado
+del LIENZO DEL LABERINTO a pantalla real. Se comprobaron además en
+esta continuación: las 17 instrucciones `LDIR`/`LDI`/`LDDR` de todo
+el fichero (ninguna copia desde el lienzo a pantalla real), el
+cuerpo completo de `ISR_SONIDO` (solo sonido, sin escritura de
+vídeo), y una simulación con un **nivel real cargado** (`CARGAR_NIVEL`
+ejecutado de verdad, no datos sueltos) seguido de
+`REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM`: la pantalla real
+($4000-$57FF) permanece en cero fuera de los 288 bytes del HUD/iconos,
+mientras que el lienzo (`$E404+`) sí contiene datos estructurados
+reales (patrones de bits reconocibles como gráficos de loseta reales,
+no basura). El descubrimiento del buffer de actores demuestra que el
+patrón "componer en RAM ahora, volcar más tarde desde otra rutina" sí
+existe en este motor — pero la única consumidora de ese patrón en la
+interrupción (`DIBUJAR_ACTORES_PENDIENTES`, vía `TICK_REDIBUJADO_VBLANK`)
+solo lee del registro de actores, no de ningún puntero global al
+lienzo, así que no es ella. Queda como pendiente concreto para una
+sesión con más herramientas (emulador con vídeo real).
+
+**Documentación corregida**: `recursos/mapa_memoria.html` (segmento
+`MOTOR_ACTORES`) y `tools/mmcanvas_sim.py` (docstring).
+
+No aplica verificación de `.tzx` (investigación + documentación,
+ningún fichero fuente de `src/` tocado).
+
+## Sesión 56 (continuación 38) — RESUELTO: `BUCLE_MEZCLA_ESQUEMA_COLOR` es el volcado del lienzo a pantalla real
+
+Petición del usuario: seguir buscando, con la pista de que "debe haber
+una rutina que explícitamente empieza a escribir en `0x4000` con
+origen el lienzo".
+
+Repasando `MOTOR_ACTORES` completo se descartó que el buffer de
+actores (continuación 37) tuviera relación con el laberinto, y una
+revisión de los 17 manejadores de tipo de loseta (incluidas las 3
+trampillas, que no se habían leído) confirmó que TODOS pasan por
+`REDIBUJAR_LOSETA_BUFFER_VRAM` (el lienzo), sin excepción.
+
+**El hallazgo real vino de reconsiderar `REFRESCAR_ESQUEMA_COLOR_NIVEL`/
+`BUCLE_MEZCLA_ESQUEMA_COLOR`** ($95FB): una sesión anterior a esta
+(no la continuación 36) ya la había caracterizado por simulación como
+*"IDEMPOTENTE, toca un pequeño conjunto fijo de bytes de pantalla
+real -- candidato a parpadeo puntual de 1-2 celdas del HUD"* — pero
+esa prueba se hizo con el lienzo **vacío**, sin datos de nivel reales.
+`PREPARAR_TABLA_ESQUEMA_COLOR` construye su tabla en la MISMA zona de
+memoria que `GESTIONAR_SCROLL`/`REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM`
+usan como lienzo ($E400 vs. $E404) — con el lienzo sucio de contenido
+real, el comportamiento de la rutina cambia radicalmente.
+
+**Prueba decisiva** (`tools/mmcanvas_sim.py`, test 5): `PREPARAR_TABLA_ESQUEMA_COLOR`
+→ `CARGAR_NIVEL` real → `REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM` (para
+poblar el lienzo con el nivel 1 de verdad) → `REFRESCAR_ESQUEMA_COLOR_NIVEL`.
+Resultado: **3456 direcciones distintas de pantalla real escritas**
+(144 de las 192 líneas de píxel, `$4044-$577B` — exactamente el área
+jugable, sin el marco decorativo), estable fotograma a fotograma
+(mismas direcciones en 4 llamadas sucesivas), y **el contenido
+resultante en pantalla real coincide byte a byte con el contenido del
+lienzo** en ese instante (`fd 60 fd 60 80 00 80 00...` en ambos
+sitios). Sin ambigüedad: esta es la rutina que traduce el lienzo
+LINEAL en RAM a la pantalla REAL entrelazada, y se llama cada VBLANK
+relevante vía `TICK_REDIBUJADO_VBLANK` — exactamente la pieza que
+faltaba.
+
+El algoritmo EXACTO (cómo cada nodo de 10 bytes de la cadena resuelve
+el direccionamiento entrelazado) no se ha derivado instrucción a
+instrucción — la rutina hace una danza muy densa de `PUSH`/`POP` con
+`SP` redirigido, alternando banco de registros (`EXX`), recorriendo
+una estructura tipo cadena enlazada; confirmado solo por su efecto
+observado, no por lectura completa del mecanismo interno. Queda como
+posible refinamiento futuro, de baja prioridad (ya no es un misterio
+funcional, solo falta la explicación instrucción a instrucción).
+
+**Corregido**: el comentario de cabecera de `BUCLE_MEZCLA_ESQUEMA_COLOR`
+en `src/madmix_body.asm` (solo el comentario — recompilado y verificado
+`0 diferencias, 48485 bytes idénticos`), `recursos/mapa_memoria.html`
+(segmento `BITMAP_MARCO_DECORATIVO`) y `tools/mmcanvas_sim.py`
+(docstring + test 5 nuevo, reproduce el hallazgo en cada ejecución).
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (cambio de comentario únicamente).

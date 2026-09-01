@@ -430,26 +430,27 @@
 <h2>5. Pendientes menores</h2>
 <p style="max-width:60rem;">
   La ingeniería inversa y reconstrucción semántica están cerradas.
-  Solo quedan dos detalles menores, de baja prioridad, sin evidencia
+  Solo quedan detalles menores, de baja prioridad, sin evidencia
   adicional que permita resolverlos con las herramientas actuales del
   proyecto (ver "Pendiente para próximas sesiones" en
   <code>src/FINDINGS.md</code>):
 </p>
 <ul style="max-width:60rem;">
-  <li>Confirmar contra vídeo real de una partida qué efecto visual
-  produce <code>BUCLE_MEZCLA_ESQUEMA_COLOR</code> en las celdas de
-  pantalla <code>$4044-$405B</code> (o descartarlo como vestigio sin
-  efecto perceptible).</li>
+  <li>El motor compone el laberinto en un lienzo de trabajo en RAM
+  (<code>$E404</code> en adelante, reutilizando la memoria del bitmap
+  del marco decorativo) y lo vuelca a pantalla real desde
+  <code>BUCLE_MEZCLA_ESQUEMA_COLOR</code> (dentro de
+  <code>REFRESCAR_ESQUEMA_COLOR_NIVEL</code>, cada VBLANK relevante) —
+  confirmado por simulación (<code>tools/mmcanvas_sim.py</code>, ver
+  <code>mapa_memoria.html</code>). El algoritmo exacto de esa rutina
+  (una cadena de nodos recorrida con <code>SP</code> redirigido) no se
+  ha derivado instrucción a instrucción, solo confirmado por su
+  efecto.</li>
   <li><code>$6047-$604A</code> (4 bytes, junto a
   <code>TABLA_PISTAS_TANQUE_AVION</code>) y <code>$604B-$605F</code>
   (26 bytes) siguen sin identificar: ningún código del fichero los
   referencia, así que no hay ni un uso ni una comparación con MSX de
   donde partir.</li>
-  <li>El motor compone el laberinto en un lienzo de trabajo en RAM
-  (<code>$E404</code> en adelante, confirmado por simulación —
-  ver <code>mapa_memoria.html</code>), pero no se ha localizado el
-  mecanismo que vuelca ese lienzo a la pantalla real entrelazada —
-  candidato para una sesión con un emulador con vídeo real.</li>
 </ul>
 
 <h2>6. Inventario completo (717 etiquetas, clasificadas y buscables)</h2>

@@ -5198,17 +5198,23 @@ BUCLE_RELLENAR_ATRIBUTOS_HUD:
 ; IX de la siguiente iteracion sale de la cadena de HL, no de la
 ; propia cadena de IX. Repite hasta que el byte alto de IX llega a 0.
 ;
-; VERIFICADO por simulacion: el proceso es IDEMPOTENTE -- desde la
-; primera pasada ya alcanza un punto fijo estable (mismo numero de
-; iteraciones y misma secuencia de IX en cada fotograma sucesivo, sin
-; reconstruir la tabla). Toca de verdad un pequeño conjunto fijo de
-; bytes reales del BITMAP de pantalla (ademas de recorrer la zona de
-; PREPARAR_TABLA_ESQUEMA_COLOR) -- confirma que el mecanismo interactua
-; con pantalla real, no solo con su propia zona de trabajo. NO
-; CONFIRMADO con la misma certeza: el efecto visual/de juego exacto
-; que produce (candidato: variacion o parpadeo puntual de 1-2 celdas
-; del HUD) -- precisarlo del todo exigiria comparar contra el juego
-; corriendo de verdad, fuera del alcance de esta sesion.
+; CORRECCION IMPORTANTE (sesion 56, continuacion posterior -- ver
+; FINDINGS.md): la nota anterior de esta cabecera decia "IDEMPOTENTE,
+; toca un pequeño conjunto fijo de bytes, candidato a parpadeo puntual
+; de 1-2 celdas del HUD" -- eso solo se habia probado con el lienzo de
+; GESTIONAR_SCROLL/REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM ($E404 en
+; adelante, ver su cabecera) VACIO/sin datos de nivel reales. Con un
+; nivel real cargado primero (tools/mmcanvas_sim.py), la MISMA rutina
+; escribe 3456 direcciones de pantalla real (144 de las 192 lineas de
+; pixel, $4044-$577B, exactamente el area jugable sin el marco),
+; estable fotograma a fotograma, y el contenido resultante coincide
+; BYTE A BYTE con el contenido del lienzo en ese momento. CONFIRMADO:
+; esta rutina, llamada cada VBLANK relevante via TICK_REDIBUJADO_VBLANK,
+; es el mecanismo que traduce el lienzo LINEAL en RAM a la pantalla
+; REAL entrelazada -- la pieza que le faltaba al hallazgo del lienzo.
+; El algoritmo exacto (que hace cada nodo con el direccionamiento
+; entrelazado) no se ha derivado instruccion a instruccion, solo
+; confirmado por su efecto observado.
 ; ---
 BUCLE_MEZCLA_ESQUEMA_COLOR:
     LD SP,IX
