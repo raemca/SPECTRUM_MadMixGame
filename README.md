@@ -1,5 +1,7 @@
 # MadMixGame (ZX Spectrum) — Proyecto de Ingeniería Inversa
 
+*[Read this in English](README.en.md)*
+
 *Ingeniería inversa, análisis y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com)*
 
 Resumen
