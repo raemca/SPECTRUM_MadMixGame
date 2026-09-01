@@ -360,7 +360,7 @@
 </div>
 
 <h2>2. Tabla de despacho <code>TABLA_SALTOS_MOTOR</code> — la "API pública" del motor (11 entradas, $9198)</h2>
-<p style="max-width:60rem;">Antepasada directa de la tabla <code>JT_*</code> de MSX (mismo orden, 11 de sus 12 entradas — a <code>JT_INICIO</code> no le hace falta sitio aquí porque <code>MOTOR_INICIO</code> ya es su propio punto de entrada). A diferencia de MSX, donde el slot 0 sí tiene llamadores reales, aquí <b>ningún slot tiene llamador real</b> en todo el fichero — cada sitio que necesita estas rutinas las llama directamente por su nombre, nunca a través de la tabla. Vestigio documentado como referencia, no como despacho real (sesión 34).</p>
+<p style="max-width:60rem;">Antepasada directa de la tabla <code>JT_*</code> de MSX (mismo orden, 11 de sus 12 entradas — a <code>JT_INICIO</code> no le hace falta sitio aquí porque <code>MOTOR_INICIO</code> ya es su propio punto de entrada). A diferencia de MSX, donde el slot 0 sí tiene llamadores reales, aquí <b>ningún slot tiene llamador real</b> en todo el fichero — cada sitio que necesita estas rutinas las llama directamente por su nombre, nunca a través de la tabla. Vestigio documentado como referencia, no como despacho real.</p>
 <table>
 <thead><tr><th>Slot</th><th>Destino real</th><th>Qué hace</th></tr></thead>
 <tbody>
@@ -379,7 +379,7 @@
 </table>
 
 <h2>3. Despachador de tipo de loseta — <code>TABLA_MANEJADORES_LOSETA</code> ($6266, 20 entradas)</h2>
-<p style="max-width:60rem;">Mismo nombre EXACTO que MSX, mismo orden y mismo patrón de duplicados (sesión 38) — despachador por tipo de loseta de <code>MOTOR_MOVIMIENTO_COLISION</code> (<code>JP (IX)</code> tras resolver el manejador).</p>
+<p style="max-width:60rem;">Mismo nombre EXACTO que MSX, mismo orden y mismo patrón de duplicados — despachador por tipo de loseta de <code>MOTOR_MOVIMIENTO_COLISION</code> (<code>JP (IX)</code> tras resolver el manejador).</p>
 <table>
 <thead><tr><th>Tipo</th><th>Manejador</th><th>Qué se sabe</th></tr></thead>
 <tbody>

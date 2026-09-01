@@ -100,39 +100,25 @@
 </head>
 <body>
 
-<h1>PTR_TABLA_SPRITES -- las 64 entradas graficas (RESUELTO, sesion 31)</h1>
+<h1>PTR_TABLA_SPRITES -- las 64 entradas graficas</h1>
 <p class="attribution-line" style="color:var(--muted);font-size:0.85rem;margin:-0.3rem 0 1.2rem 0;">Ingenieria inversa, herramientas y documentacion: Rafael Eduardo Martin Candial (raemca@hotmail.com)</p>
 <p class="subtitle">Mad Mix Game (Topo Soft, 1988) -- ZX Spectrum, VERSION ORIGINAL -- reconstruccion de <code>madmix_body.asm</code></p>
 
-<div class="note warn">
-  <strong>CORREGIDO en sesion 31 -- esta pagina sustituye a una version anterior</strong>
-  con dos errores: (1) la tabla tiene <strong>64 entradas, no 28</strong> -- la sesion 30 penso
-  que topaba con la fuente de texto justo tras la entrada 27, pero esa direccion
-  (<code>$9EFE</code>) es solo la base aritmetica de una formula de <code>ESCRIBIR_PATRON_VRAM</code>;
-  la tabla real continua sin ningun hueco hasta la entrada 63 (el mismo numero que MSX,
-  ya predicho por el guarda de <code>MOTOR_ACTORES</code> en sesion 28). (2) el formato de pixel
-  <strong>no es una imagen de 48x24 px</strong> -- cada bloque de 144 bytes son en realidad DOS
-  planos de 24x24 px (72 bytes cada uno): un <strong>AND-mask</strong> (transparencia) y un
-  <strong>OR-pattern</strong> (el dibujo real), tecnica clasica de sprite enmascarado en Z80.
-  Por eso en la version anterior de esta pagina cada sprite se veia duplicado con los
-  colores invertidos: se estaban dibujando los dos planos uno al lado del otro sin
-  combinarlos. Ver <code>FINDINGS.md</code> sesion 31 para el detalle completo.
-</div>
-
 <div class="note">
   <strong>Como se lee cada entrada:</strong> puntero de 16 bits al bloque de 144 bytes
-  (bloque compacto sin huecos de <code>$A1DE</code> a <code>$C5DD</code>) + 2 parametros
+  (bloque compacto sin huecos de <code>$A1DE</code> a <code>$C5DD</code>, 64 entradas) + 2 parametros
   (byte 3, offset/variante: 0/4/6; byte 4, SIEMPRE 24). Cada bloque de 144 bytes son 24
   filas de 6 bytes, y cada fila son 3 bytes de AND-mask (bit=1 preserva el fondo/
-  transparente) + 3 bytes de OR-pattern (bit=1 fuerza tinta) -- los dos planos van
-  entrelazados fila a fila, no como dos mitades separadas. Renderizado abajo combinando ambos planos:
+  transparente) + 3 bytes de OR-pattern (bit=1 fuerza tinta) -- los dos planos de 24x24 px
+  (tecnica clasica de sprite enmascarado en Z80) van entrelazados fila a fila, no como
+  dos mitades separadas. Renderizado abajo combinando ambos planos:
   <span style="color:#fff">blanco</span> = tinta (ink), <span style="opacity:.6">gris</span> =
   transparente (fondo del juego), negro = papel forzado (color de fondo, opaco).
   <br><br>
   <strong>Nombres:</strong> las primeras 28 entradas son <strong>identicas byte a byte</strong>
   a las primeras 28 de la tabla de MSX (64 sprites), verificado programaticamente. Las 36
-  restantes (28-63) las confirmo el usuario (jugador original) como en el mismo orden que la
-  tabla de MSX (sesion 32) -- las 64 entradas comparten ya nombre y fichero (<code>NN_nombre.spr</code>,
+  restantes (28-63) las confirmo el usuario (jugador original) en el mismo orden que la
+  tabla de MSX -- las 64 entradas comparten ya nombre y fichero (<code>NN_nombre.spr</code>,
   <code>SPRNN_NOMBRE</code>) exactamente con MSX.
 </div>
 
@@ -163,8 +149,7 @@
 
 <footer>
   Datos extraidos directamente de <code>FISICO/CODE.bin</code> (el binario original
-  verificado), byte a byte, via script -- ver <code>FINDINGS.md</code> sesion 31 para el
-  detalle de como se corrigio el numero de entradas y el formato de pixel.
+  verificado), byte a byte, via script.
 </footer>
 
 <script>

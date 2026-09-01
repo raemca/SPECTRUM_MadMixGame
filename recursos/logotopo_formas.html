@@ -107,12 +107,12 @@
 
 <h1>Logo de Topo Soft (ZX Spectrum) — explorador de formas</h1>
 <p class="attribution-line" style="color:var(--muted);font-size:0.85rem;margin:-0.3rem 0 1.2rem 0;">Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com)</p>
-<p class="subtitle">Compañero de <code>src/FINDINGS.md</code> (sesiones 5-6): las 15 entradas de la tabla de punteros <code>$ECF1</code> (indexada por <code>$EA8E</code>, ver <code>src/portada_body.asm</code>, <code>DIBUJAR_FORMA_LOGO</code>) -- <strong>identificadas</strong> (SOFT × 7 fotogramas, T-O-P-O, estrella × 4 fotogramas), cada una con su ancho de fila real. Controles ajustables en vivo por si se quiere seguir explorando el resto del hueco sin analizar.</p>
+<p class="subtitle">Las 15 entradas de <code>TABLA_PUNTEROS_FORMAS</code> (<code>$ECF1</code>, indexada por <code>DIBUJAR_FORMA_ANIMADA</code> en <code>src/portada_body.asm</code>) -- <strong>identificadas</strong> (SOFT × 7 fotogramas, T-O-P-O, estrella × 4 fotogramas), cada una con su ancho de fila real. Controles ajustables en vivo.</p>
 
 <div class="note">
-  <strong>CONFIRMADO VISUALMENTE por el usuario</strong> (ver
-  <code>FINDINGS.md</code>, sesión 6), jugando con los controles de
-  cada tarjeta: idx0-6 son los 7 fotogramas de <b>"SOFT"</b> (8
+  <strong>Confirmado visualmente por el usuario</strong>, jugando con
+  los controles de cada tarjeta: idx0-6 son los 7 fotogramas de
+  <b>"SOFT"</b> (8
   bytes/fila, cabecera de 2 bytes, 128 bytes de dibujo -- 16 filas
   exactas); idx7 es la <b>T</b> de "TOPO" (9 bytes/fila, cabecera de 3
   bytes, 765 bytes -- 85 filas); idx8/9/10 son <b>O</b>/<b>P</b>/<b>O</b>
@@ -134,13 +134,10 @@ const SHAPES = [{"idx":0,"addr":61212,"bytes":[8,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 
 const SCALE = 3;
 
-// Parametros CONFIRMADOS VISUALMENTE por el usuario (ver FINDINGS.md,
-// sesion 6) -- w=bytes/fila, skip=bytes de cabecera, total=bytes de
-// dibujo tras la cabecera. idx11-14 (w=3,skip=2,total=81) coincide
-// EXACTO con las constantes hardcodeadas de DIBUJAR_FORMA_LOGO
-// (C=$1B=27 filas, B=$03=3 bytes/fila) -- confirma que esa rutina es
-// la que dibuja la estrella; "SOFT" y las letras vienen de otra
-// rutina todavia sin localizar.
+// Parametros confirmados visualmente por el usuario -- w=bytes/fila,
+// skip=bytes de cabecera, total=bytes de dibujo tras la cabecera.
+// Todas las formas (SOFT, letras de TOPO, estrella) comparten la
+// misma rutina de dibujo de bajo nivel, DIBUJAR_FORMA_ANIMADA.
 const DEFAULTS = {
   0: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 1/7)' },
   1: { w: 8, skip: 2, total: 128, name: 'SOFT (fotograma 2/7)' },

@@ -133,45 +133,38 @@
   (índice -&gt; carácter).
 </div>
 
-<h2>Fuente de texto (<code>TABLA_FUENTE</code>, $9FFE, 60 caracteres x 8 bytes, RESUELTO)</h2>
+<h2>Fuente de texto (<code>TABLA_FUENTE</code>, $9FFE, 60 caracteres x 8 bytes)</h2>
 <p>Fuente monocroma de <code>ESCRIBIR_PATRON_VRAM</code>/<code>DIBUJAR_TEXTO_VRAM</code>
-(el motor de texto/HUD del juego): cada caracter son 8 bytes (8x8 px,
-1 bit/pixel). Direccion real confirmada en sesion 31 -- ver
-<code>FINDINGS.md</code>: <code>ESCRIBIR_PATRON_VRAM</code> calcula
+(el motor de texto/HUD del juego): cada carácter son 8 bytes (8x8 px,
+1 bit/pixel). <code>ESCRIBIR_PATRON_VRAM</code> calcula
 <code>DE = TABLA_FUENTE_BASE + A*8</code> con <code>TABLA_FUENTE_BASE
-= TABLA_FUENTE - $100</code> (los codigos de caracter usados de verdad
-por el HUD son siempre <code>&gt;=$20</code>, ver
-<code>DIBUJAR_TEXTO_VRAM</code>), asi que el caracter <code>#0</code>
-de esta galeria es el codigo de caracter <code>$20</code>, el
-<code>#1</code> es <code>$21</code>, etc. Todavia sin identificar a
-que caracter concreto (digito, letra, simbolo de puntuacion...)
-corresponde cada indice -- se ve a simple vista que hay digitos,
-letras y algunos simbolos, pero falta anotarlo entrada a entrada en
+= TABLA_FUENTE - $100</code> (los códigos de carácter usados de verdad
+por el HUD son siempre <code>&gt;=$20</code>), así que el carácter
+<code>#0</code> de esta galería es el código de carácter <code>$20</code>,
+el <code>#1</code> es <code>$21</code>, etc. Todavía sin identificar a
+qué carácter concreto (dígito, letra, símbolo de puntuación...)
+corresponde cada índice — se ve a simple vista que hay dígitos, letras
+y algunos símbolos, pero falta anotarlo entrada a entrada en
 <code>FONT_LABELS</code>.</p>
 
 <div class="grid" id="grid-font"></div>
 
-<h2>Losetas del laberinto (<code>GRAFICOS_LOSETAS</code>, $C600, 91 graficos, RESUELTO)</h2>
-<p>Cada grafico son 32 bytes (16x16 px, monocromo, 2 bytes/fila). Localizada
-en sesion 41 desde <code>REDIBUJAR_LOSETA_BUFFER_VRAM</code> ($99BD):
-calcula direccion = <code>GRAFICOS_LOSETAS + indice_loseta*32</code> (3
-rotaciones de bit = x32) y vuelca 16 filas x 2 bytes (LDI/LDI x16) al
-buffer de pantalla. Los 2912 bytes son <strong>IDENTICOS BYTE A
-BYTE</strong> a <code>GRAFICOS_LOSETAS</code> del proyecto hermano de
-MSX -- mismo fenomeno ya visto con los sprites, la fuente y las tablas
-de animacion (MSX reutilizo estos graficos del original Spectrum sin
-tocar un bit). Por eso las etiquetas de <code>TILE_LABELS</code> de
-abajo son las mismas, en el mismo orden, que identifico el usuario en
-el proyecto MSX -- ver <code>FINDINGS.md</code> sesion 41. Todavia no
-se ha localizado en este proyecto la tabla de tipo/colision equivalente
-a <code>TILE_TYPES</code> de MSX (candidata: la tabla en <code>$9B85</code>
-que consulta <code>CONSULTAR_TIPO_LOSETA</code>, sesion 34), asi que
-cada tarjeta solo muestra el indice. Sesion 42: extraidas a 91
-ficheros individuales en <code>data/img/tiles/*.til</code> (32 bytes
-cada uno, mismo nombre de fichero EXACTO que MSX), incluidos via
-<code>INCBIN</code> en <code>madmix_body.asm</code> -- igual que ya se
-hacia con los sprites -- en vez de quedar embebidos como <code>DB</code>
-inline.</p>
+<h2>Losetas del laberinto (<code>GRAFICOS_LOSETAS</code>, $C600, 91 gráficos)</h2>
+<p>Cada gráfico son 32 bytes (16x16 px, monocromo, 2 bytes/fila).
+<code>REDIBUJAR_LOSETA_BUFFER_VRAM</code> calcula dirección =
+<code>GRAFICOS_LOSETAS + índice_loseta*32</code> y vuelca 16 filas x 2
+bytes al lienzo de trabajo del laberinto en RAM. Los 2912 bytes son
+<strong>idénticos byte a byte</strong> a <code>GRAFICOS_LOSETAS</code>
+del proyecto hermano de MSX (que reutilizó estos gráficos del original
+Spectrum sin tocar un bit) — por eso las etiquetas de
+<code>TILE_LABELS</code> de abajo son las mismas, en el mismo orden,
+que ya identificó el usuario en el proyecto MSX. El tipo/colisión de
+cada loseta lo consulta <code>CONSULTAR_TIPO_LOSETA</code> contra
+<code>TABLA_TIPOS_LOSETA</code> ($9B85, mismo nombre e idéntica byte a
+byte a su equivalente MSX). Extraídas a 91 ficheros individuales en
+<code>data/img/tiles/*.til</code> (32 bytes cada uno, mismo nombre de
+fichero que MSX), incluidos vía <code>INCBIN</code> en
+<code>madmix_body.asm</code>.</p>
 
 <div class="legend">
   <span><span class="swatch" style="background:var(--accent-wall)"></span>muro (confirmado)</span>
@@ -188,9 +181,9 @@ inline.</p>
   extraidos de <code>data/img/tiles/*.til</code> (91 ficheros de 32
   bytes, uno por loseta, mismo nombre de fichero EXACTO que el
   proyecto MSX -- <code>GRAFICOS_LOSETAS</code> los incluye via
-  <code>INCBIN</code> en <code>madmix_body.asm</code>, sesion 42,
-  igual que ya se hacia con los sprites). Todo ya verificado 0
-  diferencias contra el <code>.tzx</code> original.
+  <code>INCBIN</code> en <code>madmix_body.asm</code>, igual que los
+  sprites). Todo ya verificado 0 diferencias contra el
+  <code>.tzx</code> original.
 </footer>
 
 <script>
@@ -272,7 +265,7 @@ for (let i = 0; i < NUM_CHARS; i++) {
 // LOSETAS DEL LABERINTO -- GRAFICOS_LOSETAS ($C600, 91 x 32 bytes).
 // TILE_LABELS reutiliza EXACTAMENTE las mismas etiquetas y el mismo
 // orden que el proyecto MSX (recursos/graficos.html), porque los 2912
-// bytes son identicos byte a byte -- ver FINDINGS.md sesion 41.
+// bytes son identicos byte a byte -- ver src/FINDINGS.md.
 // ============================================================
 const TILE_LABELS = {
   // --- Muro de HIERRO (0-15) ---
