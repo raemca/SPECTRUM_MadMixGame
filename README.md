@@ -107,7 +107,11 @@ Estructura del repositorio
   `mmcanvas_sim.py` (simulador Z80 más completo, usado para localizar
   el lienzo de trabajo del laberinto en RAM y confirmar que los
   actores se dibujan directo a pantalla real, sin buffer intermedio).
-- `manuales/` — manuales técnicos de referencia (aún por crear).
+- `manuales/` — manuales técnicos de referencia, en español e inglés,
+  con el mismo enfoque pedagógico ("cómo funciona", no "cómo se
+  descubrió") que el proyecto hermano de MSX: driver de sonido, motor
+  de colisión/IA, subsistema gráfico y formato de niveles — ver
+  `manuales/README.md`.
 - `recursos/` — visores HTML autocontenidos: `mapa_memoria.html`
   (distribución de la RAM 0x0000-0xFFFF), `mapa_memoria_logotopo.html`
   (zoom al rango `$EA60-$FADD` donde se dibuja el logo animado, misma
