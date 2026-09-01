@@ -6536,9 +6536,9 @@ INICIO:
 ; presentacion sonando de fondo (equivalente Spectrum de
 ; COMPROBAR_PULSACION en MSX, ver cabecera de INICIO mas arriba). ---
 ESPERAR_TECLA_INICIO:
-    LD HL,$DFB7                 ; guion de canal A (melodia) -- candidato: musica de presentacion/espera
+    LD HL,GUION_CANCION_PRESENTACION_CANAL_A  ; CONFIRMADO: musica de presentacion (ver cabecera)
     LD ($E212),HL               ; PUNTERO_CANAL_A (operando automodificable, ver REPRODUCIR_SONIDO)
-    LD HL,$DFCA                 ; guion de canal B (percusion), misma melodia
+    LD HL,GUION_CANCION_PRESENTACION_CANAL_B  ; misma cancion, canal B
     LD ($E216),HL               ; PUNTERO_CANAL_B (idem)
     CALL REPRODUCIR_SONIDO      ; CONFIRMADO sesion 55 (antes CODE_E1F9, hipotesis
                                 ; sesion 1): motor de sonido/musica por altavoz.
@@ -6655,9 +6655,9 @@ PREPARAR_INICIO_NIVEL:
 BUCLE_ESPERA_PARTIDA_NUEVA:
     HALT
     DJNZ BUCLE_ESPERA_PARTIDA_NUEVA
-    LD HL,$DFB7
+    LD HL,GUION_CANCION_PRESENTACION_CANAL_A
     LD ($E212),HL
-    LD HL,$DFCA
+    LD HL,GUION_CANCION_PRESENTACION_CANAL_B
     LD ($E216),HL
     CALL REPRODUCIR_SONIDO        ; motor de sonido, RESUELTO sesion 55
 ; --- COMPROBAR_VIDA_EXTRA (antes CODE_9C5B): RESUELTA sesion 56.
@@ -6788,9 +6788,9 @@ BUSCAR_COLUMNA_HUD:
     LD HL,$48CC
     LD DE,TEXTO_VACIO_2
     CALL DIBUJAR_TEXTO_VRAM
-    LD HL,$E007                   ; guion de canal A -- candidato: musica de inicio de nivel
+    LD HL,GUION_CANCION_INICIO_NIVEL_CANAL_A  ; CONFIRMADO: musica de inicio de nivel (ver cabecera)
     LD ($E212),HL
-    LD HL,$E00E                   ; guion de canal B
+    LD HL,GUION_CANCION_INICIO_NIVEL_CANAL_B  ; misma cancion, canal B
     LD ($E216),HL
     CALL REPRODUCIR_SONIDO        ; motor de sonido, RESUELTO sesion 55
     XOR A
@@ -6836,9 +6836,9 @@ COMPROBAR_TEMPORIZADOR_MODO_ESPECIAL:
     JR NZ,VERIFICAR_FIN_NIVEL
     LD A,(COLOR_GUARDADO)
     LD (COLOR_ACTUAL),A
-    LD HL,$E015                   ; guion de canal A -- candidato: fin de MODO_ESPECIAL
+    LD HL,GUION_CANCION_FIN_MODO_ESPECIAL_CANAL_A  ; CONFIRMADO: fin de MODO_ESPECIAL (ver cabecera)
     LD ($E212),HL
-    LD HL,$E01C                   ; guion de canal B
+    LD HL,GUION_CANCION_FIN_MODO_ESPECIAL_CANAL_B  ; misma cancion, canal B
     LD ($E216),HL
     CALL REPRODUCIR_SONIDO        ; motor de sonido, RESUELTO sesion 55
     CALL DESTELLO_ICONO_COLOR_HUD
@@ -7625,11 +7625,30 @@ GUION_DEMO_SINREF_4:          ; $DCEE, sin indice conocido en TABLA_PERFILES_DEM
     INCBIN "data/sound/spt/40_subpatron_B_df84.spt"  ; $DF84, 13 B
     INCBIN "data/sound/spt/41_subpatron_B_df91.spt"  ; $DF91, 13 B
     INCBIN "data/sound/spt/42_subpatron_A_df9e.spt"  ; $DF9E, 25 B
+; --- Las 3 canciones: RASTREADOS sesion 56 continuacion 33 los 4
+; unicos sitios de todo el fichero que escriben $E212/$E216 antes de
+; CALL REPRODUCIR_SONIDO (unicos disparadores posibles) -- mapeo
+; CONFIRMADO: CANCION_PRESENTACION suena en ESPERAR_TECLA_INICIO
+; (pantalla de titulo) y otra vez en BUCLE_ESPERA_PARTIDA_NUEVA (solo
+; al arrancar partida nueva); CANCION_INICIO_NIVEL suena al final de
+; BUSCAR_COLUMNA_HUD (cada vez que arranca a jugarse un nivel -- nueva
+; partida, siguiente nivel, o tras perder una vida);
+; CANCION_FIN_MODO_ESPECIAL suena en BUCLE_PRINCIPAL_JUEGO cuando
+; MODO_ESPECIAL_ACTIVO llega a 0 (se acaba el efecto de bola de
+; poder/hipopotamo). Encaja con el tamano: PRESENTACION (80 B) es una
+; melodia real, INICIO_NIVEL/FIN_MODO_ESPECIAL (14 B cada una) son
+; jingles cortos, no canciones completas.
+GUION_CANCION_PRESENTACION_CANAL_A:
     INCBIN "data/sound/snd/01_cancion1_canalA_dfb7.snd"  ; $DFB7, 19 B
+GUION_CANCION_PRESENTACION_CANAL_B:
     INCBIN "data/sound/snd/01_cancion1_canalB_dfca.snd"  ; $DFCA, 61 B
+GUION_CANCION_INICIO_NIVEL_CANAL_A:
     INCBIN "data/sound/snd/02_cancion2_canalA_e007.snd"  ; $E007, 7 B
+GUION_CANCION_INICIO_NIVEL_CANAL_B:
     INCBIN "data/sound/snd/02_cancion2_canalB_e00e.snd"  ; $E00E, 7 B
+GUION_CANCION_FIN_MODO_ESPECIAL_CANAL_A:
     INCBIN "data/sound/snd/03_cancion3_canalA_e015.snd"  ; $E015, 7 B
+GUION_CANCION_FIN_MODO_ESPECIAL_CANAL_B:
     INCBIN "data/sound/snd/03_cancion3_canalB_e01c.snd"  ; $E01C, 7 B
 ; $E023-$E037 (21 bytes): relleno a cero, confirmado sesion 56.
     DB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00

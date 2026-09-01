@@ -6712,3 +6712,37 @@ estructura idéntica instrucción a instrucción.
 **Verificado**: `py tools/build_all.py` sin errores, `py
 tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
 `.tzx` original** (renombrado puro, sin cambio de bytes).
+
+## Sesión 56 (continuación 33) — mapeadas las 3 canciones a su momento real del juego, etiquetadas simbólicamente
+
+Petición del usuario: averiguar qué canción suena en qué momento del
+juego (último punto "opcional" de la lista de pendientes).
+
+**Rastreados los 4 únicos sitios de todo el fichero** que escriben
+`$E212`/`$E216` (punteros de canal) antes de `CALL REPRODUCIR_SONIDO`
+— son los únicos disparadores posibles de música completa, así que el
+mapeo queda cerrado con certeza:
+
+| Canción | Disparador | Momento |
+|---|---|---|
+| `CANCION_PRESENTACION` ($DFB7/$DFCA, 80 B) | `ESPERAR_TECLA_INICIO` | Pantalla de título |
+| `CANCION_PRESENTACION` (otra vez) | `BUCLE_ESPERA_PARTIDA_NUEVA` | Solo al arrancar partida NUEVA |
+| `CANCION_INICIO_NIVEL` ($E007/$E00E, 14 B) | Cola de `BUSCAR_COLUMNA_HUD` | Cada vez que arranca a jugarse un nivel (nueva partida, siguiente nivel, o tras perder vida) |
+| `CANCION_FIN_MODO_ESPECIAL` ($E015/$E01C, 14 B) | `BUCLE_PRINCIPAL_JUEGO`, cuando `MODO_ESPECIAL_ACTIVO` llega a 0 | Se acaba el efecto de bola de poder/hipopótamo |
+
+El tamaño confirma la lectura: `CANCION_PRESENTACION` (80 B) es una
+melodía real; `CANCION_INICIO_NIVEL`/`CANCION_FIN_MODO_ESPECIAL` (14 B
+cada una) son jingles cortos, no canciones completas.
+
+Etiquetadas simbólicamente las 6 direcciones (`GUION_CANCION_
+PRESENTACION_CANAL_A/B`, `GUION_CANCION_INICIO_NIVEL_CANAL_A/B`,
+`GUION_CANCION_FIN_MODO_ESPECIAL_CANAL_A/B`, antes hex crudo `$DFB7`
+etc.) y sustituidas las 8 referencias en los 4 sitios disparadores.
+
+Con esto se cierra el último punto "opcional" de la lista de
+pendientes de la continuación 29 — no queda ninguna cuestión abierta
+sobre qué contenido de sonido/música corresponde a qué.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original**.
