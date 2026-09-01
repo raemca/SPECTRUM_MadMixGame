@@ -118,15 +118,13 @@
   bytes, 765 bytes -- 85 filas); idx8/9/10 son <b>O</b>/<b>P</b>/<b>O</b>
   (5, 6 y 6 bytes/fila respectivamente, cabecera de 2 bytes, 230/438/318
   bytes); idx11-14 son los 4 fotogramas de una <b>estrella</b> (3
-  bytes/fila, cabecera de 2 bytes, 81 bytes -- 27 filas, EXACTO el
-  tamaño que <code>DIBUJAR_FORMA_LOGO</code> tiene hardcodeado con
-  <code>C=$1B</code>/<code>B=$03</code>, confirmando que esa rutina es
-  la que dibuja específicamente la estrella; "SOFT" y las letras deben
-  venir de otra rutina distinta, aún sin localizar). Cada grupo tiene
-  algunos bytes de más sin efecto visual (relleno/fin de bloque) --
-  ver la nota de cada tarjeta. Los controles se han dejado en estos
-  valores confirmados; cambia los números para seguir explorando el
-  resto del hueco sin analizar de <code>portada_body.asm</code>.
+  bytes/fila, cabecera de 2 bytes, 81 bytes -- 27 filas). Todo el
+  logo (portada_body.asm, análisis semántico completo) comparte una
+  única rutina de dibujo de bajo nivel, <code>DIBUJAR_FORMA_ANIMADA</code>
+  -- lee la cabecera de cada forma (bytes/fila y filas) y vuelca el
+  resto como patrón de píxeles, sea "SOFT", una letra de "TOPO" o la
+  estrella. Cada grupo tiene algunos bytes de más sin efecto visual
+  (relleno/fin de bloque) -- ver la nota de cada tarjeta.
 </div>
 
 <div class="grid" id="grid"></div>

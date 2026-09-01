@@ -1,0 +1,552 @@
+<!doctype html>
+<!-- Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com) -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mad Mix Game (Spectrum) — flujo secuencial de ejecución</title>
+<style>
+  :root {
+    --bg: #faf7f0; --fg: #2a2620; --muted: #6b6458; --border: #ddd4c4;
+    --panel: #ffffff;
+    --c-boot: #d69a3a;
+    --c-motor: #6a86ae;
+    --c-items: #8a6ab0;
+    --c-hud: #7fae6a;
+    --c-menu: #4aa89a;
+    --c-sonido: #c46a6a;
+    --c-graficos: #3aa8c4;
+    --c-decision: #8f887a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1812; --fg: #ece6d8; --muted: #a89e8c; --border: #3a352b;
+      --panel: #242019;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1812; --fg: #ece6d8; --muted: #a89e8c; --border: #3a352b;
+    --panel: #242019;
+  }
+  :root[data-theme="light"] {
+    --bg: #faf7f0; --fg: #2a2620; --muted: #6b6458; --border: #ddd4c4;
+    --panel: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.5rem; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 0.3rem 0; }
+  .subtitle { color: var(--muted); font-size: 0.92rem; margin: 0 0 1rem 0; }
+  .note {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.8rem 1rem; font-size: 0.88rem; color: var(--muted); margin-bottom: 1rem;
+  }
+  .note b { color: var(--fg); }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 0.9rem; margin-bottom: 1rem;
+    font-size: 0.85rem;
+  }
+  .legend label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; }
+  .swatch { width: 0.85rem; height: 0.85rem; border-radius: 3px; display: inline-block; flex: none; }
+  .swatch.diamond { border-radius: 0; transform: rotate(45deg); }
+  .controls { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  button {
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.85rem; cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  #diagramWrap {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; overflow: auto; max-height: 84vh;
+  }
+  #diagram { transform-origin: 0 0; }
+  #diagram .node, #diagram .cluster { cursor: pointer; }
+  #boxTooltip {
+    position: fixed; z-index: 1000; display: none; pointer-events: none;
+    max-width: 22rem; background: var(--fg); color: var(--bg);
+    border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.95rem;
+    line-height: 1.35; white-space: pre-line; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  }
+</style>
+</head>
+<body>
+<h1>Mad Mix Game (ZX Spectrum) — flujo secuencial de ejecución (orden real)</h1>
+<p class="attribution-line" style="color:var(--muted);font-size:0.85rem;margin:-0.3rem 0 1.2rem 0;">Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com)</p>
+<p class="subtitle">Compañero de <code>flujo_detallado.html</code> (grafo de llamadas, agrupado por subsistema, sin orden temporal). Este diagrama representa el ORDEN REAL en que se ejecutan las cosas: arranque → título → menú → partida, frame a frame, con las condiciones reales de cada bifurcación.</p>
+
+<div class="note">
+  <b>Documento curado a mano</b> (no regenerado automáticamente desde el código, a diferencia de <code>flujo_detallado.html</code>/<code>flujo_programa.html</code>) — trazado línea a línea a partir del código real (<code>src/madmix_body.asm</code>) y verificado con <code>Grep</code> contra los nombres de etiqueta vigentes en ese momento. Si el código se renombra o cambia de estructura, este diagrama puede quedar desactualizado — revisar a mano tras cambios importantes en <code>INICIO</code>, <code>BUCLE_PRINCIPAL_JUEGO</code>, <code>MOTOR_MOVIMIENTO_COLISION</code>, <code>PROCESAR_MENU_CONTROLES</code> o <code>INICIAR_DEMO</code>.
+  <br><br>
+  <b>Cómo leer el diagrama:</b> rectángulos = acciones/llamadas reales; rombos = condiciones reales del código (con el resultado real de cada rama, no solo el código de condición Z80); el bloque punteado <b>"SIEMPRE — interrupción IM2"</b> se ejecuta en paralelo real, cada interrupción (50 Hz), independientemente de en qué punto esté el resto del flujo (una vez instalada en el arranque) — no forma parte de la secuencia lineal de cajas, por eso está aparte y conectado con una flecha punteada. El bloque <b>REPRODUCIR_SONIDO</b> es la otra cara de esa moneda: mientras suena una canción, SUSTITUYE el vector de interrupción y bloquea el resto del juego en un bucle de sondeo de teclado en primer plano — ver la nota junto a ese subgrafo.
+  <br><br>
+  <b>Manejadores de tipo de loseta:</b> se muestran los 17 manejadores reales de <code>TABLA_MANEJADORES_LOSETA</code> (algunos índices comparten el mismo manejador — p.ej. los tipos 0/8/9 son los tres <code>HNDLR_SUELO_NORMAL</code>, mismo código — están representados como un único nodo con varias flechas de entrada etiquetadas por índice). Misma estructura EXACTA que el despachador de MSX (mismo orden, mismo patrón de duplicados).
+  <br><br>
+  <b>El diagrama es grande:</b> carga con zoom ajustado automáticamente a la ventana. Usa "Ajustar al ancho" para que solo haga falta scroll vertical (el diagrama ocupa todo el ancho disponible). <b>Pasa el ratón por encima de cualquier caja</b> para ver su contenido completo en un panel junto al cursor, aunque el texto se vea diminuto con el zoom alejado; <b>haz clic</b> en una caja para fijar el panel (útil en pantallas táctiles), y clic fuera para cerrarlo.
+</div>
+
+<div class="legend" id="legend">
+  <label><input type="checkbox" value="boot" checked> <span class="swatch" style="background:var(--c-boot)"></span>Arranque</label>
+  <label><input type="checkbox" value="menu" checked> <span class="swatch" style="background:var(--c-menu)"></span>Menú / título / demo</label>
+  <label><input type="checkbox" value="motor" checked> <span class="swatch" style="background:var(--c-motor)"></span>Motor de juego</label>
+  <label><input type="checkbox" value="items" checked> <span class="swatch" style="background:var(--c-items)"></span>Items especiales</label>
+  <label><input type="checkbox" value="hud" checked> <span class="swatch" style="background:var(--c-hud)"></span>HUD / entrada</label>
+  <label><input type="checkbox" value="graficos" checked> <span class="swatch" style="background:var(--c-graficos)"></span>Gráficos (pantalla)</label>
+  <label><input type="checkbox" value="sonido" checked> <span class="swatch" style="background:var(--c-sonido)"></span>Sonido</label>
+  <label><span class="swatch diamond" style="background:var(--c-decision)"></span>Condición real (rombo)</label>
+</div>
+
+<div class="controls">
+  <button id="zoomIn">Zoom +</button>
+  <button id="zoomOut">Zoom −</button>
+  <button id="zoomReset">Reset zoom</button>
+  <button id="zoomFit">Ajustar a ventana</button>
+  <button id="zoomFitWidth">Ajustar al ancho (solo scroll vertical)</button>
+</div>
+
+<div id="boxTooltip"></div>
+
+<div id="diagramWrap">
+<div id="diagram" class="mermaid">
+flowchart TD
+
+subgraph SG_BOOT["Arranque una sola vez"]
+  B1["LOAD #quot;#quot;<br/>usuario, Spectrum 48K en blanco"]
+  B2["PAPER 0: BORDER 0: CLEAR 50000<br/>madmix_bas.bas linea 10"]
+  B3["RANDOMIZE USR 23836<br/>$5D1C PORTADA_STUB_INICIO<br/>LDIR 4222 B a $EA60, JP $EBD8"]
+  B4["logo animado Topo Soft<br/>DIBUJAR_LOGO_TOPOSOFT, $EBD8<br/>SOFTx7 + T-O-P-O + estrellax4"]
+  B5["PAUSE 40 + LOAD #quot;#quot;<br/>madmix_bas.bas linea 30<br/>carga MAD-MIX_2.bas"]
+  B6["LOAD #quot;LOADER#quot; CODE<br/>madmix2_bas.bas<br/>carga LOADER.bin en $EFB6"]
+  B7["PUNTO_ENTRADA_LOADER<br/>$EFB6, copia relocada LD-BYTES<br/>carga SCREEN.scr y CODE.bin"]
+  B8["JP $6000<br/>fin de load_cas/loader_body.asm"]
+  B9["MOTOR_INICIO<br/>$6000: JP INICIO"]
+  B10["INICIO<br/>$9BE2: SP=$5FFF, DI"]
+  B11["ACTIVAR_INTERRUPCION_MODO_2<br/>$94FC: rellena $F600-F6FF con $60<br/>I=$F6, IM 2 -- truco #quot;diamante#quot;"]
+  B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7 --> B8 --> B9 --> B10 --> B11
+end
+
+subgraph SG_ISR["SIEMPRE -- interrupcion IM2 paralela, activa desde B11"]
+  V1["JP $6060<br/>vector diamante -> ENTRADA_INTERRUPCION_VBLANK<br/>$950F, 50 veces/seg"]
+  V2["guarda TODOS los registros<br/>incl. EXX / EX AF,AF' / IX / IY"]
+  V3{"bandera $91C2 = 1?<br/>solo la puso WAIT_VBLANK"}
+  V4["REFRESCAR_ESQUEMA_COLOR_NIVEL<br/>+ DIBUJAR_ACTORES_PENDIENTES<br/>$95B0 / $945A"]
+  V5["DESPACHAR_EFECTO_SONIDO<br/>$8F55: consume EVENTO_SONIDO_PENDIENTE"]
+  V6(["restaura registros, EI, RETI"])
+  V1 --> V2 --> V3
+  V3 -->|si| V4 --> V5
+  V3 -->|no| V5
+  V5 --> V6
+end
+
+B11 -.->|"instala el vector,<br/>activo desde aqui en adelante"| V1
+
+subgraph SG_SONIDO_BLOQUEO["REPRODUCIR_SONIDO $E1F9 -- SUSTITUYE el vector mientras suena"]
+  S1["parchea $6061-6062:<br/>vector -> ISR_SONIDO ($E038)<br/>en vez de ENTRADA_INTERRUPCION_VBLANK"]
+  S2["BUCLE_TONO_CANAL_A<br/>bucle BLOQUEANTE en primer plano:<br/>genera tono por altavoz + sondea teclado"]
+  S3{"tecla pulsada,<br/>o cancion terminada?"}
+  S4(["DETENER_SONIDO $E279<br/>restaura vector original, RET"])
+  S1 --> S2 --> S3
+  S3 -->|no| S2
+  S3 -->|si| S4
+end
+
+B11 -.->|"mientras dura una llamada a<br/>REPRODUCIR_SONIDO, el resto<br/>del juego queda congelado"| S1
+
+B10 --> T1
+
+subgraph SG_TITULO["ESPERAR_TECLA_INICIO $9BEA -- pantalla de titulo"]
+  T1["instala GUION_CANCION_PRESENTACION<br/>en punteros de canal A/B"]
+  T2["CALL REPRODUCIR_SONIDO<br/>bloquea: suena + sondea teclado (ver arriba)"]
+  T3{"tecla pulsada<br/>justo al volver?"}
+  T4["CARGAR_MARCO_DECORATIVO<br/>$915A: descomprime RLE bitmap+atributos"]
+  T5["PREPARAR_TABLA_ESQUEMA_COLOR<br/>$954E: recicla el bitmap ya consumido<br/>como tabla de trabajo del HUD"]
+  T1 --> T2 --> T3
+  T3 -->|no| T1
+  T3 -->|si| T4 --> T5
+end
+
+T5 --> RP1
+
+subgraph SG_REINICIO["REINICIO -- doble punto de reentrada"]
+  RP1["REINICIAR_PARTIDA<br/>$9C07: partida nueva"]
+  RP2["CALL LEER_TECLA_MENU<br/>$8A3F -- 2a entrada al menu de controles"]
+  RP3(["vidas=3, puntuacion=0, nivel=1,<br/>vueltas=0, SCF (carry=1)"])
+  RP4["PANTALLA_PRESENTACION_NIVEL<br/>$9C21: siguiente nivel / perdida de vida<br/>AND A (carry=0), NO reinicia estado"]
+  RP1 --> RP2 --> RP3
+end
+
+RP2 --> M1
+RP3 --> PI1
+RP4 --> PI1
+
+subgraph SG_MENU["PROCESAR_MENU_CONTROLES / LEER_TECLA_MENU -- bucle del menu"]
+  M1["PROCESAR_MENU_CONTROLES $8A20<br/>DIBUJAR_CREDITOS + hasta 70 pasadas<br/>parpadeando, esperando tecla"]
+  M2["FINALIZAR_MENU_CONTROLES +<br/>APLICAR_ATRIBUTOS_MARCO_PARCIAL"]
+  M3["REINICIAR_TEMPORIZADOR_DEMO BC=500<br/>/ GUARDAR_TEMPORIZADOR_DEMO"]
+  M4["DIBUJAR_TEXTOS_MENU +<br/>LEER_TECLADO_MENU -- lee 6 bits"]
+  M5d{"bit0 = #quot;0 JUGAR#quot;?"}
+  M6(["sale del bucle: LIMPIAR_PANTALLA_MENU,<br/>$6018/COLOR_ACTUAL=0, WAIT_VBLANK, RET"])
+  M7d{"DESPACHAR_ACCION_MENU $8A87:<br/>bit5 / 1 / 2 / 3 / 4?"}
+  M8["SELECCIONAR_OPCION_DEMO $8B55<br/>CALL INICIAR_DEMO"]
+  M9["SELECCIONAR_OPCION_TECLADO $8B39<br/>CALL REDEFINIR_TECLAS"]
+  M10["SELECCIONAR_SINCLAIR $8B5F<br/>solo MODO_ENTRADA=1"]
+  M11["SELECCIONAR_KEMPSTON $8B72<br/>solo MODO_ENTRADA=2"]
+  M12["SELECCIONAR_OPCION_REDEFINIR_TECLAS $8B85<br/>MODO_ENTRADA=0"]
+  M13d{"ninguno de los 5:<br/>TEMPORIZADOR_DEMO_MENU=0?"}
+  M14["FINALIZAR_MENU_CONTROLES +<br/>APLICAR_ATRIBUTOS_MARCO_PARCIAL, RET"]
+  M1 --> M2 --> M3 --> M4 --> M5d
+  M5d -->|si| M6
+  M5d -->|no| M7d
+  M7d -->|bit5| M8
+  M7d -->|bit1| M9
+  M7d -->|bit2| M10
+  M7d -->|bit3| M11
+  M7d -->|bit4| M12
+  M7d -->|ninguno| M13d
+  M13d -->|no| M3
+  M8 --> M14
+  M9 --> M14
+  M12 --> M14
+end
+
+M13d -->|"si -- reinicia<br/>el menu entero"| M1
+M10 -.->|"RET directo, sin CALL a<br/>FINALIZAR_MENU_CONTROLES:<br/>la pantalla del menu NO se limpia"| RP2fin(["vuelve directo al llamador<br/>de LEER_TECLA_MENU/PROCESAR_MENU_CONTROLES"])
+M11 -.->|"mismo caso: RET directo,<br/>sin limpiar pantalla"| RP2fin
+
+subgraph SG_ATTRACT["INICIAR_DEMO $8EB3 -- ciclador de niveles pregrabados"]
+  D1["indice de ciclo = 0"]
+  D2["SIGUIENTE_PERFIL_DEMO:<br/>indice++"]
+  D2d{"indice = 4?<br/>los 4 perfiles ya vistos"}
+  D3["carga registro de TABLA_PERFILES_DEMO<br/>nivel actual + puntero de guion"]
+  D4["vidas=0, modo especial=0<br/>CARGAR_NIVEL + INICIALIZAR_ITEMS_NIVEL<br/>+ redibujado completo"]
+  D5["BUCLE_FRAME_DEMO:<br/>LEER_ENTRADA real (descartada) +<br/>lee siguiente par umbral/direccion del guion"]
+  D6d{"direccion leida = $FF<br/>fin de guion?"}
+  D7["aplica direccion del guion (D) via<br/>ENLACE_MOTOR_MOVIMIENTO_COLISION + WAIT_VBLANK<br/>+ ACTUALIZAR_PARPADEO_BOLA"]
+  D8d{"tecla pulsada?<br/>sondeo de 8 filas"}
+  D9(["ABORTAR_DEMO $8F3E<br/>indice de ciclo = 0, RET"])
+  D1 --> D2 --> D2d
+  D2d -->|si| D9
+  D2d -->|no| D3 --> D4 --> D5 --> D6d
+  D6d -->|si| D2
+  D6d -->|no| D7 --> D8d
+  D8d -->|si| D9
+  D8d -->|no| D5
+end
+
+M8 -.-> D1
+D9 -.->|vuelve al menu| M14
+
+subgraph SG_PRESENTACION["PREPARAR_INICIO_NIVEL $9C22 -- presentacion de nivel"]
+  PI1["PUSH AF -- guarda el carry<br/>(1=partida nueva, 0=reentrada de nivel)"]
+  PI2["CARGAR_NIVEL $883B +<br/>dibuja TEXTO_FASE (#quot; FASE nn#quot;)"]
+  PI3d{"POP AF: carry=1<br/>(partida nueva)?"}
+  PI4["espera 50 frames (BUCLE_ESPERA_PARTIDA_NUEVA)<br/>+ repite CANCION_PRESENTACION"]
+  PI5["COMPROBAR_VIDA_EXTRA $9C5B:<br/>si $603E activo, vidas+=1 (tope 5),<br/>dibuja TEXTO_EXTRA"]
+  PI6["COMPROBAR_AVISO_ULTIMA_VIDA $9C76:<br/>si $600E=1 y vidas#lt;4,<br/>dibuja TEXTO_VIDA_EXTRA"]
+  PI7["espera 80 frames -- tiempo<br/>de lectura del HUD"]
+  PI8["REINICIAR_ESTADO_NIVEL $9C93:<br/>INICIALIZAR_ITEMS_NIVEL + redibujado<br/>completo + atributos de marco"]
+  PI9["GUARDAR_SELECTOR_SPRITE_INICIAL $9CA6:<br/>selector inicial, reinicia direccion y<br/>temporizadores, FLAG_ENTRADA_BLOQUEADA=1"]
+  PI1 --> PI2 --> PI3d
+  PI3d -->|si| PI4 --> PI5
+  PI3d -->|no| PI5
+  PI5 --> PI6 --> PI7 --> PI8 --> PI9
+end
+
+PI9 --> BC1
+
+subgraph SG_HUD_BUSQUEDA["BUSCAR_COLUMNA_HUD $9CCB -- animacion de busqueda"]
+  BC1["ENLACE_MOTOR_MOVIMIENTO_COLISION<br/>+ WAIT_VBLANK, cada vuelta del bucle"]
+  BC2d{"icono buscado (C, AND $78)<br/>= byte del HUD leido?"}
+  BC3["FLAG_ENTRADA_BLOQUEADA=0<br/>dibuja TEXTO_VACIO_1/READY/VACIO_2<br/>#quot;  READY?  #quot;"]
+  BC4["instala GUION_CANCION_INICIO_NIVEL<br/>CALL REPRODUCIR_SONIDO -- bloquea otra vez"]
+  BC1 --> BC2d
+  BC2d -->|no| BC1
+  BC2d -->|si| BC3 --> BC4
+end
+
+BC4 --> F1a
+
+subgraph SG_FRAME["BUCLE_PRINCIPAL_JUEGO $9D25 -- se repite cada frame"]
+
+  subgraph SG_MOTOR["MOTOR_MOVIMIENTO_COLISION $60CD via ENLACE_MOTOR_MOVIMIENTO_COLISION"]
+    F1a["LEER_ENTRADA $9AC6<br/>o direccion del guion demo<br/>(INDICE_CICLO_NIVELES != 0)"]
+    F1c["MAPEAR_LOSETA_RELATIVA_A_ABSOLUTA<br/>+ mascara de alineamiento<br/>(TABLA_CLASE_ALINEAMIENTO)"]
+    F1e["CONSULTAR_PROXIMA_LOSETA_EN_ESTA_DIRECCION<br/>$628E -- tipo de loseta destino<br/>(reintenta con direccion anterior si bloqueada)"]
+    F1f{"MODO_ESPECIAL_ACTIVO<br/>!= 0?"}
+    F1g["OBTENER_MANEJADOR_LOSETA $613C<br/>IX = TABLA_MANEJADORES_LOSETA[tipo real]"]
+    F1g2["fuerza indice=0<br/>IX = TABLA_MANEJADORES_LOSETA[0]<br/>HNDLR_SUELO_NORMAL"]
+    F1h{"MODO_ESPECIAL_ACTIVO<br/>!= 0, 2a comprobacion?"}
+    F1a --> F1c --> F1e --> F1f
+    F1f -->|no| F1g --> F1h
+    F1f -->|si| F1g2 --> F1h
+  end
+
+  subgraph SG_HNDLR["Despacho JP IX -- TABLA_MANEJADORES_LOSETA $6266, 20 indices"]
+    H0["HNDLR_SUELO_NORMAL<br/>sin efecto, pared/pasillo"]
+    H1["HNDLR_BOLITA_NORMAL<br/>come, +1 punto, CONTADOR_BOLAS_COMIDAS++"]
+    H2["HNDLR_BOLITA_CLAVADA"]
+    H3["HNDLR_AUTOCOCO_ARRIBA"]
+    H4["HNDLR_AUTOCOCO_ABAJO"]
+    H5["HNDLR_AUTOCOCO_IZQUIERDA"]
+    H6["HNDLR_AUTOCOCO_DERECHA"]
+    H7["HNDLR_PISTA_COCOTANQUE"]
+    H10["HNDLR_PISTA_COCONAVE"]
+    H11["HNDLR_ITEM_SUELO"]
+    H12["HNDLR_BOLA_PODER<br/>activa modo especial 1"]
+    H13["HNDLR_HIPODOSO<br/>activa modo especial 2"]
+    H14["HNDLR_EXCAVATOFONO<br/>activa modo especial 3"]
+    H15["HNDLR_SUELO_SIN_BOLA"]
+    H17["HNDLR_TRAMPILLA_ABIERTA_DERECHA"]
+    H18["HNDLR_TRAMPILLA_ABIERTA_IZQUIERDA"]
+    H19["HNDLR_TRAMPILLA_CERRADA"]
+  end
+
+  F2["TICK_MODO_ESPECIAL $6164<br/>decrementa cuenta atras (MODO_ESPECIAL_CUENTA_ATRAS),<br/>parpadeo de icono/color de bola/hipopotamo"]
+  F1h -->|"si activo: el manejador<br/>NUNCA se llama"| F2
+  F1h -->|no| DESPACHO{"JP IX:<br/>tipo de loseta"}
+  DESPACHO -->|"0, 8, 9"| H0
+  DESPACHO -->|"1"| H1
+  DESPACHO -->|"2"| H2
+  DESPACHO -->|"3"| H3
+  DESPACHO -->|"4"| H4
+  DESPACHO -->|"5"| H5
+  DESPACHO -->|"6"| H6
+  DESPACHO -->|"7"| H7
+  DESPACHO -->|"10"| H10
+  DESPACHO -->|"11"| H11
+  DESPACHO -->|"12"| H12
+  DESPACHO -->|"13"| H13
+  DESPACHO -->|"14"| H14
+  DESPACHO -->|"15, 16"| H15
+  DESPACHO -->|"17"| H17
+  DESPACHO -->|"18"| H18
+  DESPACHO -->|"19"| H19
+  H0 --> F2
+  H1 --> F2
+  H2 --> F2
+  H3 --> F2
+  H4 --> F2
+  H5 --> F2
+  H6 --> F2
+  H7 --> F2
+  H10 --> F2
+  H11 --> F2
+  H12 --> F2
+  H13 --> F2
+  H14 --> F2
+  H15 --> F2
+  H17 --> F2
+  H18 --> F2
+  H19 --> F2
+
+  F3["OBTENER_SUBTABLA_DIRECCION $61B8 +<br/>BUCLE_SUBTABLA_DIRECCION $61C6<br/>selecciona fotograma del comecocos"]
+  F4["PREPARAR_SCROLL $61E6 +<br/>GESTIONAR_SCROLL $967D -- siempre, 1/frame"]
+  F5d{"FLAG_ENTRADA_BLOQUEADA<br/>= 0?"}
+  F5a["HNDLR_PELMAZOIDE $8142 +<br/>HNDLR_MARICOCO $83ED +<br/>HNDLR_REGPUNANTOSO $8504"]
+  F6["ACTUALIZAR_DESTELLO_ITEMS $86C6<br/>siempre, 1/frame"]
+  F7["MOTOR_ACTORES $91D0<br/>redibuja el comecocos"]
+  F8["BUCLE_PISTA_TANQUE_AVION $6224<br/>hasta 3 pistas de tanque/avion activas"]
+  F2 --> F3 --> F4 --> F5d
+  F5d -->|si| F5a --> F7
+  F5d -->|no| F6
+  F5a --> F6
+  F6 --> F7
+  F7 --> F8
+
+  F9["WAIT_VBLANK $9675<br/>despues de TODO el trabajo del frame"]
+  F8 --> F9
+
+  F10d{"MODO_ESPECIAL_ACTIVO<br/>= 2?"}
+  F10b["intercambia COLOR_ACTUAL<br/>con REGISTRO_NIVEL_ICONO_HUD"]
+  F11d{"AND A: temporizador<br/>= 0 (sin cuenta atras)?"}
+  F12d{"DEC: cuenta atras<br/>llega a 0 justo ahora?"}
+  F13["restaura color guardado + suena<br/>CANCION_FIN_MODO_ESPECIAL +<br/>DESTELLO_ICONO_COLOR_HUD + realinea camara AND $FC"]
+  F14["VIDAS_RESTANTES += ($6003)<br/>delta de trabajo, normalmente -1"]
+  F14d{"CP $FF:<br/>queda alguna vida?"}
+  F9 --> F10d
+  F10d -->|si| F10b --> F11d
+  F10d -->|no| F11d
+  F11d -->|si, sin cuenta atras| F15
+  F11d -->|no, sigue contando| F12d
+  F12d -->|no| F15
+  F12d -->|si, llega a 0| F13 --> F14 --> F14d
+
+  F15["VERIFICAR_FIN_NIVEL $9D8B:<br/>ACTUALIZAR_PARPADEO_BOLA"]
+  F16d{"bolas comidas =<br/>objetivo del nivel ($6019)?"}
+  F15 --> F16d
+
+  F17["VERIFICAR_ENTRADA $9DB8:<br/>LEER_ENTRADA, sondeo BIT 5 de pausa"]
+  F18d{"bit de pausa<br/>activo?"}
+  F19["BUCLE_PAUSA:<br/>pausa 50 frames + espera tecla"]
+  F16d -->|no| F17 --> F18d
+  F18d -->|si| F19
+  F18d -->|no| F20(["JP BUCLE_PRINCIPAL_JUEGO<br/>siguiente frame"])
+  F19 --> F20
+end
+
+F20 -.->|repite| F1a
+F14d -->|"si -- REINICIAR_ESTADO_NIVEL<br/>(reentrada #quot;quedan vidas#quot;)"| PI8
+F14d -->|"no ($FF exacto) -- game over"| GO["LIMPIAR_PANTALLA_MENU + WAIT_VBLANK<br/>+ dibuja TEXTO_GAME_OVER + espera 150 frames"]
+GO --> RP1
+F16d -->|si, nivel completado| SIGNIV["NIVEL_ACTUAL++ (tope 16, vueltas++)<br/>DESTELLO_ICONO_COLOR_HUD"]
+SIGNIV --> RP4
+
+class B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11 cat_boot;
+class RP1,RP2,RP3,RP4,GO,SIGNIV cat_boot;
+class V1,V2,V4,V5,V6,S1,S2,S4 cat_sonido;
+class M1,M2,M3,M4,M6,M8,M9,M10,M11,M12,M14,D1,D2,D3,D4,D5,D7,D9 cat_menu;
+class PI1,PI2,PI4,PI5,PI6,PI7,PI8,PI9,BC3,BC4,T1,T2,T4,T5 cat_hud;
+class F1a,F1c,F1e,F1g,F1g2,F2,F3,F13,F14,F20,H0,H2,H3,H4,H5,H6,H15,H17,H18,H19 cat_motor;
+class H1 cat_hud;
+class H7,H10,H11,H12,H13,H14,F5a cat_items;
+class F4,F6,F10b,BC1 cat_graficos;
+class F9,F15,F17,F19 cat_hud;
+class V3,S3,T3,PI3d,F1f,F1h,DESPACHO,F5d,F10d,F11d,F12d,F14d,F16d,F18d,M5d,M7d,M13d,D2d,D6d,D8d,BC2d cat_decision;
+
+classDef cat_boot fill:#d69a3a,stroke:#d69a3a,color:#fff,stroke-width:1px;
+classDef cat_motor fill:#6a86ae,stroke:#6a86ae,color:#fff,stroke-width:1px;
+classDef cat_items fill:#8a6ab0,stroke:#8a6ab0,color:#fff,stroke-width:1px;
+classDef cat_hud fill:#7fae6a,stroke:#7fae6a,color:#fff,stroke-width:1px;
+classDef cat_menu fill:#4aa89a,stroke:#4aa89a,color:#fff,stroke-width:1px;
+classDef cat_sonido fill:#c46a6a,stroke:#c46a6a,color:#fff,stroke-width:1px;
+classDef cat_graficos fill:#3aa8c4,stroke:#3aa8c4,color:#fff,stroke-width:1px;
+classDef cat_decision fill:#8f887a,stroke:#8f887a,color:#fff,stroke-width:1px;
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: 'transparent',
+      primaryColor: '#ffffff',
+      primaryTextColor: '#2a2620',
+      primaryBorderColor: '#6b6458',
+      lineColor: '#6b6458',
+      fontFamily: '-apple-system, Segoe UI, Roboto, sans-serif',
+      fontSize: '12px'
+    },
+    flowchart: { curve: 'basis', htmlLabels: true, useMaxWidth: false }
+  });
+
+  var scale = 1;
+  var diagram = document.getElementById('diagram');
+  var wrap = document.getElementById('diagramWrap');
+  function applyZoom() { diagram.style.transform = 'scale(' + scale + ')'; }
+  document.getElementById('zoomIn').onclick = function() { scale = Math.min(scale * 1.2, 3); applyZoom(); };
+  document.getElementById('zoomOut').onclick = function() { scale = Math.max(scale / 1.2, 0.2); applyZoom(); };
+  document.getElementById('zoomReset').onclick = function() { scale = 1; applyZoom(); };
+
+  function fitToWindow() {
+    var svg = diagram.querySelector('svg');
+    if (!svg) return;
+    var bbox;
+    try { bbox = svg.getBBox(); } catch (e) { return; }
+    if (!bbox || !bbox.width || !bbox.height) return;
+    var availW = wrap.clientWidth - 32;
+    var availH = wrap.clientHeight - 32;
+    scale = Math.max(Math.min(availW / bbox.width, availH / bbox.height, 1), 0.05);
+    applyZoom();
+  }
+  document.getElementById('zoomFit').onclick = fitToWindow;
+
+  function fitToWidth() {
+    var svg = diagram.querySelector('svg');
+    if (!svg) return;
+    var bbox;
+    try { bbox = svg.getBBox(); } catch (e) { return; }
+    if (!bbox || !bbox.width) return;
+    var availW = wrap.clientWidth - 32;
+    scale = Math.max(availW / bbox.width, 0.05);
+    applyZoom();
+  }
+  document.getElementById('zoomFitWidth').onclick = fitToWidth;
+
+  function nodeText(el) {
+    var parts = [];
+    el.childNodes.forEach(function(n) {
+      if (n.nodeType === Node.TEXT_NODE) parts.push(n.textContent);
+      else if (n.tagName === 'BR') parts.push('\n');
+      else if (n.tagName && n.tagName.toLowerCase() === 'title') { /* ignora titulos ya existentes */ }
+      else parts.push(nodeText(n));
+    });
+    return parts.join('');
+  }
+
+  var boxTooltip = document.getElementById('boxTooltip');
+  var tooltipPinned = false;
+
+  function positionTooltip(x, y) {
+    var pad = 18;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var rect = boxTooltip.getBoundingClientRect();
+    var left = x + pad;
+    var top = y + pad;
+    if (left + rect.width > vw) left = x - rect.width - pad;
+    if (top + rect.height > vh) top = y - rect.height - pad;
+    boxTooltip.style.left = Math.max(4, left) + 'px';
+    boxTooltip.style.top = Math.max(4, top) + 'px';
+  }
+  function showTooltip(text, x, y) {
+    boxTooltip.textContent = text;
+    boxTooltip.style.display = 'block';
+    positionTooltip(x, y);
+  }
+  function hideTooltip() {
+    boxTooltip.style.display = 'none';
+    tooltipPinned = false;
+  }
+
+  function wireTooltips() {
+    var svg = diagram.querySelector('svg');
+    if (!svg) return;
+    svg.querySelectorAll('.node, .cluster').forEach(function(nodeEl) {
+      var text = nodeText(nodeEl).replace(/[ \t]*\n[ \t]*/g, '\n').trim();
+      if (!text) return;
+      nodeEl.addEventListener('mouseenter', function(ev) {
+        if (!tooltipPinned) showTooltip(text, ev.clientX, ev.clientY);
+      });
+      nodeEl.addEventListener('mousemove', function(ev) {
+        if (!tooltipPinned) positionTooltip(ev.clientX, ev.clientY);
+      });
+      nodeEl.addEventListener('mouseleave', function() {
+        if (!tooltipPinned) hideTooltip();
+      });
+      nodeEl.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        showTooltip(text, ev.clientX, ev.clientY);
+        tooltipPinned = true;
+      });
+    });
+    document.addEventListener('click', hideTooltip);
+  }
+
+  var wireAttempts = 0;
+  var wireTimer = setInterval(function() {
+    wireAttempts++;
+    var svg = diagram.querySelector('svg');
+    var ready = svg && svg.querySelectorAll('.node, .cluster').length > 0;
+    if (ready) {
+      clearInterval(wireTimer);
+      fitToWindow();
+      wireTooltips();
+    } else if (wireAttempts > 100) {
+      clearInterval(wireTimer); // se rindio tras 10s -- algo fue mal en el render de mermaid
+    }
+  }, 100);
+
+  document.querySelectorAll('#legend input[type=checkbox]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var cat = cb.value;
+      var display = cb.checked ? '' : 'none';
+      document.querySelectorAll('.cat_' + cat).forEach(function(el) {
+        el.style.display = display;
+      });
+    });
+  });
+</script>
+</body>
+</html>

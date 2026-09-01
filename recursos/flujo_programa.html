@@ -14,6 +14,10 @@
     --accent: #8a6ab0;
     --c-boot: #d69a3a;
     --c-motor: #6a86ae;
+    --c-items: #8a6ab0;
+    --c-hud: #7fae6a;
+    --c-menu: #4aa89a;
+    --c-sonido: #c46a6a;
     --c-pend: #cbc3b6;
   }
   @media (prefers-color-scheme: dark) {
@@ -26,6 +30,10 @@
       --accent: #a17fd0;
       --c-boot: #e6b25a;
       --c-motor: #7f9bc4;
+      --c-items: #a17fd0;
+      --c-hud: #8fc27a;
+      --c-menu: #5ec2b2;
+      --c-sonido: #d68a8a;
       --c-pend: #4a453c;
     }
   }
@@ -99,7 +107,45 @@
   .box .addr { color: var(--muted); font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.78rem; display: block; margin-bottom: 0.15rem; }
   .box.boot { border-left-color: var(--c-boot); }
   .box.motor { border-left-color: var(--c-motor); }
-  .box.pend { border-left-color: var(--c-pend); font-style: italic; color: var(--muted); }
+  .box.items { border-left-color: var(--c-items); }
+  .box.hud { border-left-color: var(--c-hud); }
+  .box.menu { border-left-color: var(--c-menu); }
+  .box.sonido { border-left-color: var(--c-sonido); }
+  .tag-always { color: var(--c-hud); font-weight: 700; font-size: 0.9rem; }
+  .tag-cond { color: var(--c-sonido); font-weight: 700; font-size: 0.9rem; }
+  .tag-event { color: var(--c-items); font-weight: 700; font-size: 0.9rem; }
+
+  /* --- mini-diagrama de las opciones del menú de controles --- */
+  .menu-options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 0.2rem 0;
+    padding: 0.7rem;
+    background: color-mix(in srgb, var(--c-menu) 8%, transparent);
+    border: 1px dashed var(--c-menu);
+    border-radius: 8px;
+  }
+  .opt {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8rem;
+    min-width: 130px;
+    text-align: center;
+  }
+  .opt b { font-size: 0.83rem; }
+  .opt-note { color: var(--muted); font-size: 0.74rem; }
+  .loopback { font-size: 0.74rem; color: var(--c-menu); font-weight: 600; }
+  .opt.opt-exit { border: 2px solid var(--c-motor); }
+  .loopback-exit { color: var(--c-motor); }
+  .status-ok { color: #4a9a5a; }
+  .status-part { color: #c48a3a; }
 
   .legend {
     display: flex;
@@ -181,31 +227,29 @@
 <p class="subtitle">Compañero visual de <code>src/FINDINGS.md</code> (el diario de descubrimientos). Documento vivo: se amplía sesión a sesión — ver también <code>recursos/mapa_memoria.html</code>.</p>
 
 <div class="note">
-  Recién empezado: la parte 1 (diagrama) cubre por ahora solo la
-  <strong>cadena de arranque completa</strong>, ya reconstruida y
-  verificada byte a byte (sesiones 1-3 de <code>FINDINGS.md</code>) —
-  desde <code>LOAD ""</code> hasta el salto al motor. Lo que pasa
-  DENTRO del motor (<code>madmix_body.asm</code>, 36790 bytes) y de la
-  portada (<code>portada_body.asm</code>, 4222 bytes) todavía no se ha
-  analizado semánticamente — son reconstrucciones mecánicas de primera
-  pasada (ver <code>src/README.md</code>), así que el diagrama se
-  detiene justo donde empieza lo desconocido. La parte 2 es el
-  <b>inventario completo y buscable</b> de todas las etiquetas de los
-  ficheros fuente (dirección, fichero, línea), generado automáticamente
-  con <code>tools/gen_inventory.py</code> a partir del listado de
-  SjASMPlus — la inmensa mayoría son etiquetas mecánicas
-  <code>CODE_XXXX</code>/<code>PORTADA_XXXX</code> sin significado
-  todavía: es precisamente lo que se irá rellenando sesión a sesión, a
-  medida que se les ponga nombre real.
+  Este fichero tiene dos partes: <b>1)</b> un diagrama de flujo grande
+  (§1-4: desde <code>LOAD ""</code> hasta el bucle de cada frame,
+  con la tabla de despacho del motor, el despachador de tipo de
+  loseta y las variables de estado compartido clave), a mano, con las
+  piezas más importantes para leerse de un vistazo; y <b>2)</b> el
+  <b>inventario completo</b> (§6) de las 717 etiquetas de los ficheros
+  fuente (dirección, fichero, línea), buscable, generado
+  automáticamente con <code>tools/gen_inventory.py</code>. Todo lo que
+  muestra el diagrama tiene análisis semántico completo, verificado
+  byte a byte contra el <code>.tzx</code> original (ver
+  <code>src/README.md</code> para el detalle de cada subsistema).
 </div>
 
 <div class="legend">
   <span><span class="swatch" style="background:var(--c-boot)"></span>Arranque (BASIC → portada → loader)</span>
-  <span><span class="swatch" style="background:var(--c-motor)"></span>Motor de juego</span>
-  <span><span class="swatch" style="background:var(--c-pend)"></span>Sin analizar todavía</span>
+  <span><span class="swatch" style="background:var(--c-motor)"></span>Motor de juego (actores, colisión, cámara)</span>
+  <span><span class="swatch" style="background:var(--c-items)"></span>Ítems especiales</span>
+  <span><span class="swatch" style="background:var(--c-hud)"></span>HUD / entrada</span>
+  <span><span class="swatch" style="background:var(--c-menu)"></span>Menú / créditos</span>
+  <span><span class="swatch" style="background:var(--c-sonido)"></span>Sonido</span>
 </div>
 
-<h2>1. Diagrama de flujo — cadena de arranque</h2>
+<h2>1. Diagrama de flujo grande — de <code>LOAD ""</code> al bucle de cada frame</h2>
 
 <div class="flow">
 
@@ -222,7 +266,7 @@
   </div>
   <div class="flow-arrow">↓ código de portada (dibuja la presentación, vuelve a BASIC con RET)</div>
   <div class="flow-row">
-    <div class="box pend"><b>portada_body.asm</b><span class="addr">$EA60-$FABD (4222 B)</span>reconstrucción mecánica, sin analizar todavía — ver §2</div>
+    <div class="box motor"><b>portada_body.asm</b><span class="addr">$EA60-$FABD (4222 B)</span>logo animado de Topo Soft (SOFT×7 + T-O-P-O + estrella×4) — análisis semántico completo</div>
   </div>
   <div class="flow-arrow">↓ PAUSE 40 (línea 20, tras el RANDOMIZE USR) — línea 30</div>
   <div class="flow-row">
@@ -242,26 +286,173 @@
   </div>
   <div class="flow-arrow">↓</div>
   <div class="flow-row">
-    <div class="box pend"><b>madmix_body.asm — MOTOR_INICIO</b><span class="addr">$6000 (36790 B)</span>reconstrucción mecánica, sin analizar todavía — ver §2</div>
+    <div class="box motor"><b>MOTOR_INICIO</b><span class="addr">$6000 — madmix_body.asm (36790 B)</span>salta directo a <code>INICIO</code>, por encima de la zona de variables de trabajo del motor</div>
+  </div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-row">
+    <div class="box motor"><b>INICIO</b><span class="addr">$9BE2</span>SP=$5FFF, DI, activa interrupciones en modo 2 (<code>ACTIVAR_INTERRUPCION_MODO_2</code>, tabla "diamante" en $F600)</div>
+  </div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-row">
+    <div class="box motor"><b>ESPERAR_TECLA_INICIO</b><span class="addr">$9BEA</span>pantalla de título: suena <code>CANCION_PRESENTACION</code> y espera cualquier tecla</div>
+  </div>
+  <div class="flow-arrow">↓ tecla pulsada</div>
+  <div class="flow-row">
+    <div class="box motor"><b>REINICIAR_PARTIDA</b><span class="addr">$9C07</span>partida nueva: primero procesa el menú de controles, luego reinicia vidas (3), puntuación (0) y nivel (1)</div>
+    <div class="box motor"><b>PANTALLA_PRESENTACION_NIVEL</b><span class="addr">$9C21</span>siguiente nivel o pérdida de vida: sin menú, NO reinicia vidas ni puntuación</div>
+  </div>
+  <div class="flow-arrow">↓ solo en el camino "partida nueva"</div>
+  <div class="flow-row">
+    <div class="box menu"><b>LEER_TECLA_MENU → PROCESAR_MENU_CONTROLES</b><span class="addr">$8A3F → $8A20</span>dibuja el menú, parpadea/espera tecla (arranca la demo si nadie pulsa nada tras <code>TEMPORIZADOR_DEMO_MENU</code> pasadas)</div>
+  </div>
+  <div class="menu-options">
+    <div class="opt"><b>1 TECLADO</b><span class="opt-note">esquema QAOP</span><span class="loopback">↺ vuelve al menú</span></div>
+    <div class="opt"><b>2 KEMPSTON</b><span class="opt-note">joystick puerto $1F</span><span class="loopback">↺ vuelve al menú</span></div>
+    <div class="opt"><b>3 SINCLAIR-SJS</b><span class="opt-note">Interface 2 emulado</span><span class="loopback">↺ vuelve al menú</span></div>
+    <div class="opt"><b>4 REDEFINE TECLAS</b><span class="opt-note">reescribe TABLA_TECLAS_MODO_0</span><span class="loopback">↺ vuelve al menú</span></div>
+    <div class="opt"><b>5 DEMO</b><span class="opt-note">INICIAR_DEMO — cicla TABLA_PERFILES_DEMO</span><span class="loopback">↺ se ejecuta y vuelve al menú</span></div>
+    <div class="opt opt-exit"><b>0 JUGAR</b><span class="opt-note">FINALIZAR_MENU_CONTROLES</span><span class="loopback loopback-exit">↓ continúa abajo</span></div>
+  </div>
+  <div class="flow-arrow">↓ ambos caminos confluyen</div>
+  <div class="flow-row">
+    <div class="box motor"><b>PREPARAR_INICIO_NIVEL</b><span class="addr">$9C22</span><code>CARGAR_NIVEL</code> ($883B) + dibuja el HUD (fase, vidas extra…) + repite la música si es partida nueva</div>
+  </div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-row">
+    <div class="box hud"><b>BUSCAR_COLUMNA_HUD</b><span class="addr">$9CCB</span>animación de búsqueda de columna del HUD; dispara <code>CANCION_INICIO_NIVEL</code></div>
+  </div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-row">
+    <div class="box motor"><b>BUCLE_PRINCIPAL_JUEGO</b><span class="addr">$9D25 — el bucle real de cada frame</span><code>LEER_ENTRADA</code> + <code>WAIT_VBLANK</code>, cuenta atrás de <code>MODO_ESPECIAL_ACTIVO</code>, resta una vida y game over si no quedan (si <code>VERIFICAR_FIN_NIVEL</code>, $9D8B, detecta nivel completado → vuelve a <code>PREPARAR_INICIO_NIVEL</code>)</div>
+  </div>
+  <div class="flow-note">Cada frame llama a <code>MOTOR_MOVIMIENTO_COLISION</code> ($60CD), que decide la dirección válida, resuelve el fotograma de animación y consulta el tipo de la loseta un paso por delante.</div>
+
+  <div class="flow-arrow"><span class="tag-always">SIEMPRE</span> — dentro de <code>MOTOR_MOVIMIENTO_COLISION</code>, sin condición</div>
+  <div class="flow-row">
+    <div class="box hud"><b>LEER_ENTRADA</b><span class="addr">$9AC6</span>teclado/joystick (o guion de demo) → decide dirección</div>
+    <div class="box motor"><b>TABLA_MANEJADORES_LOSETA</b><span class="addr">$6266 (§3)</span>20 manejadores por tipo de loseta — forzados a "sin efecto" si hay modo especial activo</div>
+    <div class="box hud"><b>GESTIONAR_SCROLL</b><span class="addr">$967D</span>dispara scroll fino si toca</div>
+    <div class="box items"><b>ACTUALIZAR_DESTELLO_ITEMS</b><span class="addr">$86C6</span>temporizador de destello de ítems especiales</div>
+    <div class="box items"><b>BUCLE_PISTA_TANQUE_AVION</b><span class="addr">$6224</span>redibuja cada pista de tanque/avión activa</div>
+  </div>
+
+  <div class="flow-arrow"><span class="tag-cond">CONDICIONAL</span> — solo si <code>FLAG_ENTRADA_BLOQUEADA</code>=0 (teclado no bloqueado)</div>
+  <div class="flow-row">
+    <div class="box motor"><b>MOTOR_ACTORES + DIBUJAR_ACTORES_PENDIENTES</b><span class="addr">$91D0 / $945A</span>redibuja el comecocos con la posición/estado nuevos</div>
+    <div class="box items"><b>HNDLR_PELMAZOIDE / HNDLR_MARICOCO / HNDLR_REGPUNANTOSO</b><span class="addr">$8142 / $83ED / $8504</span>IA de fantasma / mariquita repone bolitas / "repugnantoso" las convierte en clavadas — los 3 comparten <code>MOTOR_MOVIMIENTO_ITEM</code> ($81BC)</div>
+  </div>
+
+  <div class="flow-arrow"><span class="tag-event">EVENTO</span> — disparado desde dentro de un manejador <code>HNDLR_*</code> (§3), según el tipo de loseta pisada</div>
+  <div class="flow-row">
+    <div class="box hud"><b>DIBUJAR_MARCADOR_PUNTOS</b><span class="addr">$9A01</span>solo cuando cambia la puntuación (comer bolita, bonus…), no cada frame</div>
+    <div class="box items"><b>REGISTRAR_PISTA_TANQUE_AVION / AVISAR_PROXIMIDAD_PISTA / ARMAR_AVISO_DESTELLO</b><span class="addr">$646C / $85AE / $860E</span>arma/mueve una pista de tanque/avión, aviso de proximidad</div>
+    <div class="box sonido"><b>DESPACHAR_EFECTO_SONIDO</b><span class="addr">$8F55, vía EVENTO_SONIDO_PENDIENTE ($8FD6)</span>efectos cortos de jugabilidad, consumidos por interrupción</div>
+  </div>
+  <div class="flow-note">Los efectos cortos van por interrupción: <code>ENTRADA_INTERRUPCION_VBLANK</code> ($950F) llama cada VBLANK a <code>TICK_REDIBUJADO_VBLANK</code> y a <code>DESPACHAR_EFECTO_SONIDO</code>. La música (<code>REPRODUCIR_SONIDO</code>) es distinta: parchea el vector IM2 ($6061-$6062) para que apunte a <code>ISR_SONIDO</code> en vez de a <code>ENTRADA_INTERRUPCION_VBLANK</code>, y bloquea el juego en un bucle de sondeo de teclado en primer plano hasta que la música termina o se pulsa una tecla — mientras suena, el resto del bucle de juego no avanza.</div>
+
+  <div class="flow-arrow">↓ fin de nivel / game over / pausa</div>
+  <div class="flow-row">
+    <div class="box menu"><b>CARGAR_NIVEL / INICIALIZAR_ITEMS_NIVEL</b><span class="addr">$883B / $87BC</span>carga el siguiente registro de nivel</div>
+    <div class="box menu"><b>INICIAR_DEMO</b><span class="addr">$8EB3</span>modo demo, ciclo de niveles de muestra</div>
+    <div class="box menu"><b>DIBUJAR_CREDITOS</b><span class="addr">$8DE5</span>pantalla de créditos, parte del menú de controles</div>
   </div>
 
 </div>
 
-<h2>2. Pendiente</h2>
-<p style="max-width:60rem;">
-  Todo lo que pasa dentro de <code>madmix_body.asm</code> (bucle
-  principal, driver de sonido, tablas de nivel, sprites, colisión,
-  pantalla de créditos...) y de <code>portada_body.asm</code> (qué
-  dibuja exactamente, si tiene su propio bucle de espera de tecla)
-  está sin identificar todavía — es el trabajo grande de las próximas
-  sesiones (ver "Pendiente" en <code>src/FINDINGS.md</code>, sesión
-  2). Cuando se vaya resolviendo, este diagrama crecerá con las mismas
-  secciones que tiene el <code>flujo_programa.html</code> del proyecto
-  hermano de MSX: tabla de despacho, despachador de tipo de loseta,
-  subsistemas de HUD/items/sonido, etc.
-</p>
+<h2>2. Tabla de despacho <code>TABLA_SALTOS_MOTOR</code> — la "API pública" del motor (11 entradas, $9198)</h2>
+<p style="max-width:60rem;">Antepasada directa de la tabla <code>JT_*</code> de MSX (mismo orden, 11 de sus 12 entradas — a <code>JT_INICIO</code> no le hace falta sitio aquí porque <code>MOTOR_INICIO</code> ya es su propio punto de entrada). A diferencia de MSX, donde el slot 0 sí tiene llamadores reales, aquí <b>ningún slot tiene llamador real</b> en todo el fichero — cada sitio que necesita estas rutinas las llama directamente por su nombre, nunca a través de la tabla. Vestigio documentado como referencia, no como despacho real (sesión 34).</p>
+<table>
+<thead><tr><th>Slot</th><th>Destino real</th><th>Qué hace</th></tr></thead>
+<tbody>
+<tr><td>0 — JT_MOTOR_ACTORES</td><td><code>MOTOR_ACTORES</code> ($91D0)</td><td>Motor de render de actores/personajes</td></tr>
+<tr><td>1 — JT_RESET_CONTADOR_ACTORES</td><td><code>RESET_CONTADOR_ACTORES</code> ($9670)</td><td>Resetea el contador de actores activos cada frame</td></tr>
+<tr><td>2 — JT_WAIT_VBLANK</td><td><code>WAIT_VBLANK</code> ($9675)</td><td>Espera sincronismo vertical</td></tr>
+<tr><td>3 — JT_ACTIVAR_INTERRUPCION</td><td><code>ACTIVAR_INTERRUPCION_MODO_2</code> ($94FC)</td><td>Instala el vector de interrupción (truco "diamante" IM2)</td></tr>
+<tr><td>4 — JT_LEER_ENTRADA</td><td><code>LEER_ENTRADA</code> ($9AC6)</td><td>Teclado/joystick</td></tr>
+<tr><td>5 — JT_DIBUJAR_MARCADOR_PUNTOS</td><td><code>DIBUJAR_MARCADOR_PUNTOS</code> ($9A01)</td><td>Marcador de puntos</td></tr>
+<tr><td>6 — JT_GESTIONAR_SCROLL</td><td><code>GESTIONAR_SCROLL</code> ($967D)</td><td>Gestión de scroll de cámara</td></tr>
+<tr><td>7 — JT_REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM</td><td><code>REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM</code> ($9904)</td><td>Redibujado TOTAL de cámara (36 franjas)</td></tr>
+<tr><td>8 — JT_REDIBUJAR_LOSETA_BUFFER_VRAM</td><td><code>REDIBUJAR_LOSETA_BUFFER_VRAM</code> ($99BD)</td><td>Redibuja una loseta individual</td></tr>
+<tr><td>9 — JT_MAPEAR_LOSETA_RELATIVA_A_ABSOLUTA</td><td><code>MAPEAR_LOSETA_RELATIVA_A_ABSOLUTA</code> ($9985)</td><td>Coordenada → dirección de matriz de nivel</td></tr>
+<tr><td>10 — JT_CONSULTAR_TIPO_LOSETA</td><td><code>CONSULTAR_TIPO_LOSETA</code> ($99A9)</td><td>Dirección de loseta → tipo</td></tr>
+</tbody>
+</table>
 
-<h2>3. Inventario completo (717 etiquetas, clasificadas y buscables)</h2>
+<h2>3. Despachador de tipo de loseta — <code>TABLA_MANEJADORES_LOSETA</code> ($6266, 20 entradas)</h2>
+<p style="max-width:60rem;">Mismo nombre EXACTO que MSX, mismo orden y mismo patrón de duplicados (sesión 38) — despachador por tipo de loseta de <code>MOTOR_MOVIMIENTO_COLISION</code> (<code>JP (IX)</code> tras resolver el manejador).</p>
+<table>
+<thead><tr><th>Tipo</th><th>Manejador</th><th>Qué se sabe</th></tr></thead>
+<tbody>
+<tr><td>0</td><td><code>HNDLR_SUELO_NORMAL</code> ($62E1)</td><td class="status-ok">Pared/suelo normal, sin efecto de juego</td></tr>
+<tr><td>1</td><td><code>HNDLR_BOLITA_NORMAL</code> ($62F1)</td><td class="status-ok">Bolita normal (comer, sumar contador)</td></tr>
+<tr><td>2</td><td><code>HNDLR_BOLITA_CLAVADA</code> ($6325)</td><td class="status-ok">Bola fija/clavada</td></tr>
+<tr><td>3</td><td><code>HNDLR_AUTOCOCO_ARRIBA</code> ($6341)</td><td class="status-ok">Flecha de dirección forzada (arriba)</td></tr>
+<tr><td>4</td><td><code>HNDLR_AUTOCOCO_ABAJO</code> ($6379)</td><td class="status-ok">Flecha de dirección forzada (abajo)</td></tr>
+<tr><td>5</td><td><code>HNDLR_AUTOCOCO_IZQUIERDA</code> ($63B1)</td><td class="status-ok">Flecha de dirección forzada (izquierda)</td></tr>
+<tr><td>6</td><td><code>HNDLR_AUTOCOCO_DERECHA</code> ($63E9)</td><td class="status-ok">Flecha de dirección forzada (derecha)</td></tr>
+<tr><td>7</td><td><code>HNDLR_PISTA_COCOTANQUE</code> ($6421)</td><td class="status-ok">Pista tanque vertical</td></tr>
+<tr><td>8, 9</td><td><code>HNDLR_SUELO_NORMAL</code> (repetido)</td><td>Mismo manejador que el tipo 0</td></tr>
+<tr><td>10</td><td><code>HNDLR_PISTA_COCONAVE</code> ($6490)</td><td class="status-ok">Pista del avión</td></tr>
+<tr><td>11</td><td><code>HNDLR_ITEM_SUELO</code> ($651C)</td><td class="status-part">Ítem de suelo sin confirmar del todo en el catálogo visual</td></tr>
+<tr><td>12</td><td><code>HNDLR_BOLA_PODER</code> ($6543)</td><td class="status-ok">Bola de poder real</td></tr>
+<tr><td>13</td><td><code>HNDLR_HIPODOSO</code> ($6580)</td><td class="status-ok">Ítem hipopótamo</td></tr>
+<tr><td>14</td><td><code>HNDLR_EXCAVATOFONO</code> ($65B1)</td><td class="status-ok">Ítem herramienta</td></tr>
+<tr><td>15, 16</td><td><code>HNDLR_SUELO_SIN_BOLA</code> ($65DA)</td><td class="status-ok">Resetea modo especial</td></tr>
+<tr><td>17</td><td><code>HNDLR_TRAMPILLA_ABIERTA_DERECHA</code> ($6675)</td><td class="status-ok">Trampilla abriéndose hacia la derecha</td></tr>
+<tr><td>18</td><td><code>HNDLR_TRAMPILLA_ABIERTA_IZQUIERDA</code> ($66BC)</td><td class="status-ok">Trampilla abriéndose hacia la izquierda</td></tr>
+<tr><td>19</td><td><code>HNDLR_TRAMPILLA_CERRADA</code> ($6705)</td><td class="status-ok">Trampilla cerrándose (variante interna <code>HNDLR_TRAMPILLA_CERRADA_B</code>)</td></tr>
+</tbody>
+</table>
+
+<h2>4. Variables de estado compartido clave ($6003-$6062)</h2>
+<p style="max-width:60rem;">Zona de trabajo del motor justo detrás de <code>MOTOR_INICIO</code>, saltada al arrancar (nunca ejecutada como código). La mayoría comparte nombre EXACTO con su equivalente MSX.</p>
+<table>
+<thead><tr><th>Dirección</th><th>Qué es</th></tr></thead>
+<tbody>
+<tr><td><code>$6007/$6009/$600B</code></td><td><code>REGISTRO_NIVEL_CUERPO_PTR/CABECERA_PTR/PIE_PTR</code> — punteros al registro de nivel activo</td></tr>
+<tr><td><code>$6016</code></td><td><code>REGISTRO_NIVEL_POSICION_COMECOCOS</code> (word) — posición viva del comecocos/cámara</td></tr>
+<tr><td><code>$601B</code></td><td><code>NIVEL_ACTUAL</code> — nivel actual (1-15)</td></tr>
+<tr><td><code>$601C</code></td><td><code>CONTADOR_BOLAS_COMIDAS</code> (word) — contador en vivo de bolitas/ítems comidos este nivel</td></tr>
+<tr><td><code>$6021/$6022/$6023</code></td><td><code>MODO_ESPECIAL_FLAG/CUENTA_ATRAS/ACTIVO</code> — estado del modo especial temporal (bola de poder/hipopótamo)</td></tr>
+<tr><td><code>$6024</code></td><td><code>DIRECCION_DE_MOVIMIENTO</code> — dirección elegida este frame</td></tr>
+<tr><td><code>$6025</code></td><td><code>SELECTOR_SPRITE_COMECOCOS</code> — fotograma de animación (fase de boca + orientación) que dibuja <code>MOTOR_ACTORES</code></td></tr>
+<tr><td><code>$602A</code></td><td><code>POSICION_ACTUAL_CAMARA</code> (word) — valor inicial $1018, idéntico a MSX</td></tr>
+<tr><td><code>$6035</code></td><td><code>SEMILLA_ALEATORIA</code> (word) — semilla del generador pseudoaleatorio</td></tr>
+<tr><td><code>$603A</code></td><td><code>VIDAS_RESTANTES</code> — vidas restantes</td></tr>
+<tr><td><code>$603C</code></td><td><code>PUNTUACION</code> (word) — puntuación acumulada</td></tr>
+<tr><td><code>$6040</code></td><td><code>MODO_ESPECIAL</code> — selector de modo especial activo</td></tr>
+<tr><td><code>$8FD6</code></td><td><code>EVENTO_SONIDO_PENDIENTE</code> — índice de efecto de sonido a disparar, mismo nombre EXACTO que MSX</td></tr>
+<tr><td><code>$9B84</code></td><td><code>FLAG_ENTRADA_BLOQUEADA</code> — bit 0: si está activo, bloquea el redibujado de actores este frame</td></tr>
+<tr><td><code>$FC60</code></td><td>Sin etiqueta propia — buffer del nivel activo (cabecera + cuerpo + pie, ver <code>CARGAR_NIVEL</code>)</td></tr>
+</tbody>
+</table>
+
+<h2>5. Pendientes menores</h2>
+<p style="max-width:60rem;">
+  La ingeniería inversa y reconstrucción semántica están cerradas.
+  Solo quedan dos detalles menores, de baja prioridad, sin evidencia
+  adicional que permita resolverlos con las herramientas actuales del
+  proyecto (ver "Pendiente para próximas sesiones" en
+  <code>src/FINDINGS.md</code>):
+</p>
+<ul style="max-width:60rem;">
+  <li>Confirmar contra vídeo real de una partida qué efecto visual
+  produce <code>BUCLE_MEZCLA_ESQUEMA_COLOR</code> en las celdas de
+  pantalla <code>$4044-$405B</code> (o descartarlo como vestigio sin
+  efecto perceptible).</li>
+  <li><code>$6047-$604A</code> (4 bytes, junto a
+  <code>TABLA_PISTAS_TANQUE_AVION</code>) y <code>$604B-$605F</code>
+  (26 bytes) siguen sin identificar: ningún código del fichero los
+  referencia, así que no hay ni un uso ni una comparación con MSX de
+  donde partir.</li>
+  <li>El motor compone el laberinto en un lienzo de trabajo en RAM
+  (<code>$E404</code> en adelante, confirmado por simulación —
+  ver <code>mapa_memoria.html</code>), pero no se ha localizado el
+  mecanismo que vuelca ese lienzo a la pantalla real entrelazada —
+  candidato para una sesión con un emulador con vídeo real.</li>
+</ul>
+
+<h2>6. Inventario completo (717 etiquetas, clasificadas y buscables)</h2>
 <p>
   Generado automáticamente por <code>tools/gen_inventory.py</code> a
   partir de <code>src/build/main.lst</code> (listado de SjASMPlus) —

@@ -1,0 +1,436 @@
+<!doctype html>
+<!-- Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com) -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mad Mix Game (Spectrum) — flujo detallado de llamadas</title>
+<style>
+  :root {
+    --bg: #faf7f0; --fg: #2a2620; --muted: #6b6458; --border: #ddd4c4;
+    --panel: #ffffff;
+    --c-boot: #d69a3a;
+    --c-motor: #6a86ae;
+    --c-items: #8a6ab0;
+    --c-hud: #7fae6a;
+    --c-menu: #4aa89a;
+    --c-sonido: #c46a6a;
+    --c-graficos: #3aa8c4;
+    --c-otros: #cbc3b6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1812; --fg: #ece6d8; --muted: #a89e8c; --border: #3a352b;
+      --panel: #242019;
+      --c-boot: #e6b25a;
+      --c-motor: #7f9bc4;
+      --c-items: #a17fd0;
+      --c-hud: #8fc27a;
+      --c-menu: #5ec2b2;
+      --c-sonido: #d68a8a;
+      --c-graficos: #4ac2d6;
+      --c-otros: #4a453c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1812; --fg: #ece6d8; --muted: #a89e8c; --border: #3a352b;
+    --panel: #242019;
+      --c-boot: #e6b25a;
+      --c-motor: #7f9bc4;
+      --c-items: #a17fd0;
+      --c-hud: #8fc27a;
+      --c-menu: #5ec2b2;
+      --c-sonido: #d68a8a;
+      --c-graficos: #4ac2d6;
+      --c-otros: #4a453c;
+  }
+  :root[data-theme="light"] {
+    --bg: #faf7f0; --fg: #2a2620; --muted: #6b6458; --border: #ddd4c4;
+    --panel: #ffffff;
+    --c-boot: #d69a3a;
+    --c-motor: #6a86ae;
+    --c-items: #8a6ab0;
+    --c-hud: #7fae6a;
+    --c-menu: #4aa89a;
+    --c-sonido: #c46a6a;
+    --c-graficos: #3aa8c4;
+    --c-otros: #cbc3b6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.5rem; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 0.3rem 0; }
+  .subtitle { color: var(--muted); font-size: 0.92rem; margin: 0 0 1rem 0; }
+  .note {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.8rem 1rem; font-size: 0.88rem; color: var(--muted); margin-bottom: 1rem;
+  }
+  .note b { color: var(--fg); }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 0.9rem; margin-bottom: 1rem;
+    font-size: 0.85rem;
+  }
+  .legend label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; }
+  .swatch { width: 0.85rem; height: 0.85rem; border-radius: 3px; display: inline-block; flex: none; }
+  .controls { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  button {
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.85rem; cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  #diagramWrap {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; overflow: auto; max-height: 82vh;
+  }
+  #diagram { transform-origin: 0 0; }
+  #diagram .node, #diagram .cluster { cursor: pointer; }
+  .edgeLabel { background: var(--panel) !important; }
+  #boxTooltip {
+    position: fixed; z-index: 1000; display: none; pointer-events: none;
+    max-width: 22rem; background: var(--fg); color: var(--bg);
+    border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.95rem;
+    line-height: 1.35; white-space: pre-line; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  }
+</style>
+</head>
+<body>
+<h1>Mad Mix Game (ZX Spectrum) — flujo detallado de llamadas (grafo real)</h1>
+<p class="attribution-line" style="color:var(--muted);font-size:0.85rem;margin:-0.3rem 0 1.2rem 0;">Ingeniería inversa, herramientas y documentación: Rafael Eduardo Martín Candial (raemca@hotmail.com)</p>
+<p class="subtitle">Compañero de <code>flujo_programa.html</code> (inventario + diagrama a mano). Generado automáticamente por <code>tools/gen_flow_diagram.py</code> a partir del grafo de llamadas real (<code>src/build/main.lst</code>).</p>
+
+<div class="note">
+  <b>Alcance:</b> solo se representan las 82 etiquetas clasificadas
+  <b>"función"</b> (destino de al menos un <code>CALL</code> en algún sitio del código
+  fuente transcrito) — el mismo conjunto que la categoría "función" del inventario de
+  <code>flujo_programa.html</code>. Las aristas son llamadas <code>CALL</code> reales entre
+  esas funciones (28 aristas); una arista punteada con etiqueta (p.ej. <code>C</code>,
+  <code>NZ</code>) es una llamada condicional (<code>CALL cc,destino</code>) — el texto es
+  el código de condición del Z80, no una descripción semántica de la condición real.
+  <br><br>
+  <b>Lo que NO aparece aquí:</b> los manejadores de tipo de loseta
+  (<code>HNDLR_SUELO_NORMAL</code>, <code>HNDLR_BOLITA_NORMAL</code>, etc., alcanzados vía
+  <code>JP (IX)</code> desde <code>TABLA_MANEJADORES_LOSETA</code>, no vía <code>CALL</code> —
+  ver <code>flujo_programa.html</code> §3) ni el resto de puntos "interna" (destino solo de
+  <code>JP</code>/<code>JR</code>, sin <code>CALL</code>) — son un conjunto bastante más
+  grande y una pieza central real del flujo del juego que este grafo, centrado en llamadas,
+  no captura.
+  <br><br>
+  <b>Aristas descartadas:</b> 206 llamadas <code>CALL</code> a nodos "función" NO
+  se representan porque ocurren dentro de una rutina que en sí misma NO es "función" (solo
+  se alcanza por <code>JR</code>/<code>JP</code>) — no hay un nodo de origen fiable al que
+  atribuírselas sin inventar una relación falsa, así que se omiten en vez de colgarlas de la
+  "función" más cercana en el fichero fuente.
+  <br><br>
+  <b>El diagrama es grande:</b> carga con zoom ajustado automáticamente a la ventana. Usa
+  "Ajustar al ancho" para que solo haga falta scroll vertical. Pasa el ratón por encima de
+  cualquier caja para ver su contenido completo en un panel junto al cursor; haz clic para
+  fijarlo (útil en pantallas táctiles), y clic fuera para cerrarlo.
+</div>
+
+<div class="legend" id="legend">
+  <label><input type="checkbox" value="boot" checked> <span class="swatch" style="background:var(--c-boot)"></span>Arranque / portada (18)</label>
+  <label><input type="checkbox" value="menu" checked> <span class="swatch" style="background:var(--c-menu)"></span>Menu / creditos / demo (10)</label>
+  <label><input type="checkbox" value="motor" checked> <span class="swatch" style="background:var(--c-motor)"></span>Motor de juego (14)</label>
+  <label><input type="checkbox" value="items" checked> <span class="swatch" style="background:var(--c-items)"></span>Items especiales (10)</label>
+  <label><input type="checkbox" value="hud" checked> <span class="swatch" style="background:var(--c-hud)"></span>HUD / entrada (12)</label>
+  <label><input type="checkbox" value="graficos" checked> <span class="swatch" style="background:var(--c-graficos)"></span>Graficos / VRAM (14)</label>
+  <label><input type="checkbox" value="sonido" checked> <span class="swatch" style="background:var(--c-sonido)"></span>Sonido (4)</label>
+</div>
+
+<div class="controls">
+  <button id="zoomIn">Zoom +</button>
+  <button id="zoomOut">Zoom −</button>
+  <button id="zoomReset">Reset zoom</button>
+  <button id="zoomFit">Ajustar a ventana</button>
+  <button id="zoomFitWidth">Ajustar al ancho (solo scroll vertical)</button>
+</div>
+
+<div id="boxTooltip"></div>
+
+<div id="diagramWrap">
+<div id="diagram" class="mermaid">
+flowchart TD
+  subgraph SG_boot["Arranque / portada"]
+    N_ACTIVAR_INTERRUPCION_MODO_2["ACTIVAR_INTERRUPCION_MODO_2<br/>$94FC"]
+    N_ANIMAR_PUNTO_LUZ_SOFT["ANIMAR_PUNTO_LUZ_SOFT<br/>$EA60"]
+    N_DIBUJAR_FORMA_ANIMADA["DIBUJAR_FORMA_ANIMADA<br/>$EA82"]
+    N_RESTAURAR_FRANJA_FONDO["RESTAURAR_FRANJA_FONDO<br/>$EAD3"]
+    N_DIBUJAR_SOFT_ROTANDO["DIBUJAR_SOFT_ROTANDO<br/>$EB17"]
+    N_DIBUJAR_T_TOPO["DIBUJAR_T_TOPO<br/>$EB38"]
+    N_DIBUJAR_P_TOPO_ANIMADA["DIBUJAR_P_TOPO_ANIMADA<br/>$EB53"]
+    N_DIBUJAR_O1_TOPO["DIBUJAR_O1_TOPO<br/>$EB6D"]
+    N_DIBUJAR_O2_TOPO_ANIMADA["DIBUJAR_O2_TOPO_ANIMADA<br/>$EB95"]
+    N_DIBUJAR_ESTRELLA_ANIMADA["DIBUJAR_ESTRELLA_ANIMADA<br/>$EBB9"]
+    N_LIMPIAR_TABLA_COLOR_VRAM["LIMPIAR_TABLA_COLOR_VRAM<br/>$EC29"]
+    N_RELLENAR_COLOR_TOPO["RELLENAR_COLOR_TOPO<br/>$EC4D"]
+    N_ANIMAR_COLOR_TOPO["ANIMAR_COLOR_TOPO<br/>$EC66"]
+    N_PAUSA_ENTRE_LETRAS["PAUSA_ENTRE_LETRAS<br/>$ECDA"]
+    N_DIBUJAR_FORMA_TEMPORIZADA["DIBUJAR_FORMA_TEMPORIZADA<br/>$ECE0"]
+    N_GUARDAR_PANTALLA_LOGO["GUARDAR_PANTALLA_LOGO<br/>$ECE5"]
+    N_RESTAURAR_FRANJA_FILA["RESTAURAR_FRANJA_FILA<br/>$ED85"]
+    N_LEER_BLOQUE_CINTA["LEER_BLOQUE_CINTA<br/>$EFD3"]
+  end
+  subgraph SG_menu["Menu / creditos / demo"]
+    N_LEER_TECLA_MENU["LEER_TECLA_MENU<br/>$8A3F"]
+    N_LIMPIAR_PANTALLA_MENU["LIMPIAR_PANTALLA_MENU<br/>$8A6C"]
+    N_DIBUJAR_TEXTOS_MENU["DIBUJAR_TEXTOS_MENU<br/>$8AB1"]
+    N_LEER_TECLADO_MENU["LEER_TECLADO_MENU<br/>$8B98"]
+    N_FINALIZAR_MENU_CONTROLES["FINALIZAR_MENU_CONTROLES<br/>$8BB8"]
+    N_REDEFINIR_TECLAS["REDEFINIR_TECLAS<br/>$8C1F"]
+    N_INICIAR_REDEFINICION_TECLAS["INICIAR_REDEFINICION_TECLAS<br/>$8D68"]
+    N_ESPERAR_TECLA_NUEVA["ESPERAR_TECLA_NUEVA<br/>$8D79"]
+    N_DIBUJAR_CREDITOS["DIBUJAR_CREDITOS<br/>$8DE5"]
+    N_INICIAR_DEMO["INICIAR_DEMO<br/>$8EB3"]
+  end
+  subgraph SG_motor["Motor de juego"]
+    N_ENLACE_MOTOR_MOVIMIENTO_COLISION["ENLACE_MOTOR_MOVIMIENTO_COLISION<br/>$6063"]
+    N_CONSULTAR_PROXIMA_LOSETA_EN_ESTA_DIRECCION["CONSULTAR_PROXIMA_LOSETA_EN_ESTA_DIRECCION<br/>$628E"]
+    N_CONSULTAR_LOSETA_LIBRE_DIRECCION["CONSULTAR_LOSETA_LIBRE_DIRECCION<br/>$8358"]
+    N_MAPEAR_COORDENADA_A_DIRECCION["MAPEAR_COORDENADA_A_DIRECCION<br/>$83A3"]
+    N_GENERAR_ALEATORIO["GENERAR_ALEATORIO<br/>$83BC"]
+    N_CARGAR_NIVEL["CARGAR_NIVEL<br/>$883B"]
+    N_MOTOR_ACTORES["MOTOR_ACTORES<br/>$91D0"]
+    N_VOLTEAR_PATRON_HORIZONTAL["VOLTEAR_PATRON_HORIZONTAL<br/>$93DB"]
+    N_CALCULAR_LIMITE_INTERCAMBIO["CALCULAR_LIMITE_INTERCAMBIO<br/>$941B"]
+    N_DIBUJAR_ACTORES_PENDIENTES["DIBUJAR_ACTORES_PENDIENTES<br/>$945A"]
+    N_TICK_REDIBUJADO_VBLANK["TICK_REDIBUJADO_VBLANK<br/>$9534"]
+    N_MAPEAR_LOSETA_RELATIVA_A_ABSOLUTA["MAPEAR_LOSETA_RELATIVA_A_ABSOLUTA<br/>$9985"]
+    N_CONSULTAR_TIPO_LOSETA["CONSULTAR_TIPO_LOSETA<br/>$99A9"]
+    N_ACTUALIZAR_PARPADEO_BOLA["ACTUALIZAR_PARPADEO_BOLA<br/>$9DD1"]
+  end
+  subgraph SG_items["Items especiales"]
+    N_REGISTRAR_PISTA_TANQUE_AVION["REGISTRAR_PISTA_TANQUE_AVION<br/>$646C"]
+    N_MOTOR_MOVIMIENTO_ITEM["MOTOR_MOVIMIENTO_ITEM<br/>$81BC"]
+    N_CALCULAR_POSICION_VRAM_ITEM["CALCULAR_POSICION_VRAM_ITEM<br/>$82E6"]
+    N_MAPEAR_COORDENADA_A_DIRECCION_LOCAL["MAPEAR_COORDENADA_A_DIRECCION_LOCAL<br/>$849D"]
+    N_AVISAR_PROXIMIDAD_PISTA["AVISAR_PROXIMIDAD_PISTA<br/>$85AE"]
+    N_ARMAR_AVISO_DESTELLO["ARMAR_AVISO_DESTELLO<br/>$860E"]
+    N_ACTUALIZAR_DESTELLO_ITEMS["ACTUALIZAR_DESTELLO_ITEMS<br/>$86C6"]
+    N_ACTIVAR_EFECTO_ITEM["ACTIVAR_EFECTO_ITEM<br/>$871C"]
+    N_INICIALIZAR_ITEMS_NIVEL["INICIALIZAR_ITEMS_NIVEL<br/>$87BC"]
+    N_INICIALIZAR_PARCIAL_ITEMS_NIVEL["INICIALIZAR_PARCIAL_ITEMS_NIVEL<br/>$882F"]
+  end
+  subgraph SG_hud["HUD / entrada"]
+    N_ESPERAR_TECLA_SOLTADA["ESPERAR_TECLA_SOLTADA<br/>$8C16"]
+    N_PREPARAR_TABLA_ESQUEMA_COLOR["PREPARAR_TABLA_ESQUEMA_COLOR<br/>$954E"]
+    N_ESCRIBIR_COLOR_ACTUAL_X2["ESCRIBIR_COLOR_ACTUAL_X2<br/>$95AB"]
+    N_REFRESCAR_ESQUEMA_COLOR_NIVEL["REFRESCAR_ESQUEMA_COLOR_NIVEL<br/>$95B0"]
+    N_DIBUJAR_MARCADOR_PUNTOS["DIBUJAR_MARCADOR_PUNTOS<br/>$9A01"]
+    N_CONVERTIR_PUNTUACION_A_TEXTO["CONVERTIR_PUNTUACION_A_TEXTO<br/>$9A3E"]
+    N_ESCRIBIR_DIGITO_PUNTUACION["ESCRIBIR_DIGITO_PUNTUACION<br/>$9A69"]
+    N_LEER_ENTRADA["LEER_ENTRADA<br/>$9AC6"]
+    N_ESCANEAR_TABLA_TECLAS["ESCANEAR_TABLA_TECLAS<br/>$9AF1"]
+    N_ESCANEAR_FILAS_TECLADO["ESCANEAR_FILAS_TECLADO<br/>$9AF5"]
+    N_COMPROBAR_TECLA["COMPROBAR_TECLA<br/>$9B3C"]
+    N_DESTELLO_ICONO_COLOR_HUD["DESTELLO_ICONO_COLOR_HUD<br/>$9DE1"]
+  end
+  subgraph SG_graficos["Graficos / VRAM"]
+    N_DIBUJAR_CAMBIO_LOSETA["DIBUJAR_CAMBIO_LOSETA<br/>$62C9"]
+    N_ESCRIBIR_PATRON_VRAM["ESCRIBIR_PATRON_VRAM<br/>$8BCB"]
+    N_DIBUJAR_TEXTO_VRAM["DIBUJAR_TEXTO_VRAM<br/>$8BEE"]
+    N_CARGAR_MARCO_DECORATIVO["CARGAR_MARCO_DECORATIVO<br/>$915A"]
+    N_APLICAR_ATRIBUTOS_MARCO_COMPLETO["APLICAR_ATRIBUTOS_MARCO_COMPLETO<br/>$9174"]
+    N_APLICAR_ATRIBUTOS_MARCO_PARCIAL["APLICAR_ATRIBUTOS_MARCO_PARCIAL<br/>$918D"]
+    N_CALCULAR_DIRECCION_PANTALLA["CALCULAR_DIRECCION_PANTALLA<br/>$9656"]
+    N_WAIT_VBLANK["WAIT_VBLANK<br/>$9675"]
+    N_GESTIONAR_SCROLL["GESTIONAR_SCROLL<br/>$967D"]
+    N_BUCLE_REDIBUJAR_FILA_VERTICAL["BUCLE_REDIBUJAR_FILA_VERTICAL<br/>$972A"]
+    N_MAPEAR_LOSETA_A_GRAFICO["MAPEAR_LOSETA_A_GRAFICO<br/>$9899"]
+    N_REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM["REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM<br/>$9904"]
+    N_REDIBUJAR_LOSETA_BUFFER_VRAM["REDIBUJAR_LOSETA_BUFFER_VRAM<br/>$99BD"]
+    N_DIBUJAR_CADENA_VRAM["DIBUJAR_CADENA_VRAM<br/>$9A90"]
+  end
+  subgraph SG_sonido["Sonido"]
+    N_DESPACHAR_EFECTO_SONIDO["DESPACHAR_EFECTO_SONIDO<br/>$8F55"]
+    N_INICIAR_TONO_EFECTO_SONIDO["INICIAR_TONO_EFECTO_SONIDO<br/>$8F91"]
+    N_REPRODUCIR_SONIDO["REPRODUCIR_SONIDO<br/>$E1F9"]
+    N_COPIAR_PATRON_TONO["COPIAR_PATRON_TONO<br/>$E281"]
+  end
+  N_ANIMAR_COLOR_TOPO --> N_RELLENAR_COLOR_TOPO
+  N_BUCLE_REDIBUJAR_FILA_VERTICAL --> N_MAPEAR_LOSETA_A_GRAFICO
+  N_DIBUJAR_CADENA_VRAM --> N_CALCULAR_DIRECCION_PANTALLA
+  N_DIBUJAR_CREDITOS --> N_DIBUJAR_TEXTO_VRAM
+  N_DIBUJAR_CREDITOS --> N_FINALIZAR_MENU_CONTROLES
+  N_DIBUJAR_ESTRELLA_ANIMADA --> N_DIBUJAR_FORMA_TEMPORIZADA
+  N_DIBUJAR_MARCADOR_PUNTOS --> N_CONVERTIR_PUNTUACION_A_TEXTO
+  N_DIBUJAR_O1_TOPO --> N_DIBUJAR_FORMA_ANIMADA
+  N_DIBUJAR_O1_TOPO --> N_RESTAURAR_FRANJA_FONDO
+  N_DIBUJAR_O2_TOPO_ANIMADA --> N_DIBUJAR_FORMA_ANIMADA
+  N_DIBUJAR_O2_TOPO_ANIMADA --> N_RESTAURAR_FRANJA_FONDO
+  N_DIBUJAR_P_TOPO_ANIMADA --> N_DIBUJAR_FORMA_TEMPORIZADA
+  N_DIBUJAR_SOFT_ROTANDO --> N_DIBUJAR_FORMA_TEMPORIZADA
+  N_DIBUJAR_TEXTOS_MENU --> N_DIBUJAR_TEXTO_VRAM
+  N_DIBUJAR_T_TOPO --> N_DIBUJAR_FORMA_TEMPORIZADA
+  N_ESCANEAR_FILAS_TECLADO --> N_COMPROBAR_TECLA
+  N_FINALIZAR_MENU_CONTROLES --> N_LIMPIAR_PANTALLA_MENU
+  N_LEER_TECLADO_MENU --> N_ESCANEAR_FILAS_TECLADO
+  N_LEER_TECLA_MENU --> N_APLICAR_ATRIBUTOS_MARCO_PARCIAL
+  N_LEER_TECLA_MENU --> N_FINALIZAR_MENU_CONTROLES
+  N_REDEFINIR_TECLAS --> N_DIBUJAR_TEXTO_VRAM
+  N_REDEFINIR_TECLAS --> N_ESCRIBIR_PATRON_VRAM
+  N_REDEFINIR_TECLAS --> N_ESPERAR_TECLA_NUEVA
+  N_REDEFINIR_TECLAS --> N_FINALIZAR_MENU_CONTROLES
+  N_REDEFINIR_TECLAS --> N_INICIAR_REDEFINICION_TECLAS
+  N_RESTAURAR_FRANJA_FONDO --> N_RESTAURAR_FRANJA_FILA
+  N_TICK_REDIBUJADO_VBLANK --> N_DIBUJAR_ACTORES_PENDIENTES
+  N_TICK_REDIBUJADO_VBLANK --> N_REFRESCAR_ESQUEMA_COLOR_NIVEL
+  class N_ACTIVAR_INTERRUPCION_MODO_2,N_ANIMAR_PUNTO_LUZ_SOFT,N_DIBUJAR_FORMA_ANIMADA,N_RESTAURAR_FRANJA_FONDO,N_DIBUJAR_SOFT_ROTANDO,N_DIBUJAR_T_TOPO,N_DIBUJAR_P_TOPO_ANIMADA,N_DIBUJAR_O1_TOPO,N_DIBUJAR_O2_TOPO_ANIMADA,N_DIBUJAR_ESTRELLA_ANIMADA,N_LIMPIAR_TABLA_COLOR_VRAM,N_RELLENAR_COLOR_TOPO,N_ANIMAR_COLOR_TOPO,N_PAUSA_ENTRE_LETRAS,N_DIBUJAR_FORMA_TEMPORIZADA,N_GUARDAR_PANTALLA_LOGO,N_RESTAURAR_FRANJA_FILA,N_LEER_BLOQUE_CINTA cat_boot;
+  class N_LEER_TECLA_MENU,N_LIMPIAR_PANTALLA_MENU,N_DIBUJAR_TEXTOS_MENU,N_LEER_TECLADO_MENU,N_FINALIZAR_MENU_CONTROLES,N_REDEFINIR_TECLAS,N_INICIAR_REDEFINICION_TECLAS,N_ESPERAR_TECLA_NUEVA,N_DIBUJAR_CREDITOS,N_INICIAR_DEMO cat_menu;
+  class N_ENLACE_MOTOR_MOVIMIENTO_COLISION,N_CONSULTAR_PROXIMA_LOSETA_EN_ESTA_DIRECCION,N_CONSULTAR_LOSETA_LIBRE_DIRECCION,N_MAPEAR_COORDENADA_A_DIRECCION,N_GENERAR_ALEATORIO,N_CARGAR_NIVEL,N_MOTOR_ACTORES,N_VOLTEAR_PATRON_HORIZONTAL,N_CALCULAR_LIMITE_INTERCAMBIO,N_DIBUJAR_ACTORES_PENDIENTES,N_TICK_REDIBUJADO_VBLANK,N_MAPEAR_LOSETA_RELATIVA_A_ABSOLUTA,N_CONSULTAR_TIPO_LOSETA,N_ACTUALIZAR_PARPADEO_BOLA cat_motor;
+  class N_REGISTRAR_PISTA_TANQUE_AVION,N_MOTOR_MOVIMIENTO_ITEM,N_CALCULAR_POSICION_VRAM_ITEM,N_MAPEAR_COORDENADA_A_DIRECCION_LOCAL,N_AVISAR_PROXIMIDAD_PISTA,N_ARMAR_AVISO_DESTELLO,N_ACTUALIZAR_DESTELLO_ITEMS,N_ACTIVAR_EFECTO_ITEM,N_INICIALIZAR_ITEMS_NIVEL,N_INICIALIZAR_PARCIAL_ITEMS_NIVEL cat_items;
+  class N_ESPERAR_TECLA_SOLTADA,N_PREPARAR_TABLA_ESQUEMA_COLOR,N_ESCRIBIR_COLOR_ACTUAL_X2,N_REFRESCAR_ESQUEMA_COLOR_NIVEL,N_DIBUJAR_MARCADOR_PUNTOS,N_CONVERTIR_PUNTUACION_A_TEXTO,N_ESCRIBIR_DIGITO_PUNTUACION,N_LEER_ENTRADA,N_ESCANEAR_TABLA_TECLAS,N_ESCANEAR_FILAS_TECLADO,N_COMPROBAR_TECLA,N_DESTELLO_ICONO_COLOR_HUD cat_hud;
+  class N_DIBUJAR_CAMBIO_LOSETA,N_ESCRIBIR_PATRON_VRAM,N_DIBUJAR_TEXTO_VRAM,N_CARGAR_MARCO_DECORATIVO,N_APLICAR_ATRIBUTOS_MARCO_COMPLETO,N_APLICAR_ATRIBUTOS_MARCO_PARCIAL,N_CALCULAR_DIRECCION_PANTALLA,N_WAIT_VBLANK,N_GESTIONAR_SCROLL,N_BUCLE_REDIBUJAR_FILA_VERTICAL,N_MAPEAR_LOSETA_A_GRAFICO,N_REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM,N_REDIBUJAR_LOSETA_BUFFER_VRAM,N_DIBUJAR_CADENA_VRAM cat_graficos;
+  class N_DESPACHAR_EFECTO_SONIDO,N_INICIAR_TONO_EFECTO_SONIDO,N_REPRODUCIR_SONIDO,N_COPIAR_PATRON_TONO cat_sonido;
+  classDef cat_boot fill:#d69a3a,stroke:#d69a3a,color:#fff,stroke-width:1px;
+  classDef cat_motor fill:#6a86ae,stroke:#6a86ae,color:#fff,stroke-width:1px;
+  classDef cat_items fill:#8a6ab0,stroke:#8a6ab0,color:#fff,stroke-width:1px;
+  classDef cat_hud fill:#7fae6a,stroke:#7fae6a,color:#fff,stroke-width:1px;
+  classDef cat_menu fill:#4aa89a,stroke:#4aa89a,color:#fff,stroke-width:1px;
+  classDef cat_sonido fill:#c46a6a,stroke:#c46a6a,color:#fff,stroke-width:1px;
+  classDef cat_graficos fill:#3aa8c4,stroke:#3aa8c4,color:#fff,stroke-width:1px;
+  classDef cat_otros fill:#cbc3b6,stroke:#cbc3b6,color:#fff,stroke-width:1px;
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  function currentTheme() {
+    var attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'dark' || attr === 'light') return attr;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: 'transparent',
+      primaryColor: '#ffffff',
+      primaryTextColor: '#2a2620',
+      primaryBorderColor: '#6b6458',
+      lineColor: '#6b6458',
+      fontFamily: '-apple-system, Segoe UI, Roboto, sans-serif',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', htmlLabels: true, useMaxWidth: false }
+  });
+
+  var scale = 1;
+  var wrap = document.getElementById('diagramWrap');
+  var diagram = document.getElementById('diagram');
+  function applyZoom() { diagram.style.transform = 'scale(' + scale + ')'; }
+  document.getElementById('zoomIn').onclick = function() { scale = Math.min(scale * 1.2, 3); applyZoom(); };
+  document.getElementById('zoomOut').onclick = function() { scale = Math.max(scale / 1.2, 0.2); applyZoom(); };
+  document.getElementById('zoomReset').onclick = function() { scale = 1; applyZoom(); };
+
+  function fitToWindow() {
+    var svg = diagram.querySelector('svg');
+    if (!svg) return;
+    var bbox;
+    try { bbox = svg.getBBox(); } catch (e) { return; }
+    if (!bbox || !bbox.width || !bbox.height) return;
+    var availW = wrap.clientWidth - 32;
+    var availH = wrap.clientHeight - 32;
+    scale = Math.max(Math.min(availW / bbox.width, availH / bbox.height, 1), 0.05);
+    applyZoom();
+  }
+  document.getElementById('zoomFit').onclick = fitToWindow;
+
+  function fitToWidth() {
+    var svg = diagram.querySelector('svg');
+    if (!svg) return;
+    var bbox;
+    try { bbox = svg.getBBox(); } catch (e) { return; }
+    if (!bbox || !bbox.width) return;
+    var availW = wrap.clientWidth - 32;
+    scale = Math.max(availW / bbox.width, 0.05);
+    applyZoom();
+  }
+  document.getElementById('zoomFitWidth').onclick = fitToWidth;
+
+  function nodeText(el) {
+    var parts = [];
+    el.childNodes.forEach(function(n) {
+      if (n.nodeType === Node.TEXT_NODE) parts.push(n.textContent);
+      else if (n.tagName === 'BR') parts.push('\n');
+      else if (n.tagName && n.tagName.toLowerCase() === 'title') { /* ignora titulos ya existentes */ }
+      else parts.push(nodeText(n));
+    });
+    return parts.join('');
+  }
+
+  var boxTooltip = document.getElementById('boxTooltip');
+  var tooltipPinned = false;
+
+  function positionTooltip(x, y) {
+    var pad = 18;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var rect = boxTooltip.getBoundingClientRect();
+    var left = x + pad;
+    var top = y + pad;
+    if (left + rect.width > vw) left = x - rect.width - pad;
+    if (top + rect.height > vh) top = y - rect.height - pad;
+    boxTooltip.style.left = Math.max(4, left) + 'px';
+    boxTooltip.style.top = Math.max(4, top) + 'px';
+  }
+  function showTooltip(text, x, y) {
+    boxTooltip.textContent = text;
+    boxTooltip.style.display = 'block';
+    positionTooltip(x, y);
+  }
+  function hideTooltip() {
+    boxTooltip.style.display = 'none';
+    tooltipPinned = false;
+  }
+
+  function wireTooltips() {
+    var svg = diagram.querySelector('svg');
+    if (!svg) return;
+    svg.querySelectorAll('.node, .cluster').forEach(function(nodeEl) {
+      var text = nodeText(nodeEl).replace(/[ \t]*\n[ \t]*/g, '\n').trim();
+      if (!text) return;
+      nodeEl.addEventListener('mouseenter', function(ev) {
+        if (!tooltipPinned) showTooltip(text, ev.clientX, ev.clientY);
+      });
+      nodeEl.addEventListener('mousemove', function(ev) {
+        if (!tooltipPinned) positionTooltip(ev.clientX, ev.clientY);
+      });
+      nodeEl.addEventListener('mouseleave', function() {
+        if (!tooltipPinned) hideTooltip();
+      });
+      nodeEl.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        showTooltip(text, ev.clientX, ev.clientY);
+        tooltipPinned = true;
+      });
+    });
+    document.addEventListener('click', hideTooltip);
+  }
+
+  var wireAttempts = 0;
+  var wireTimer = setInterval(function() {
+    wireAttempts++;
+    var svg = diagram.querySelector('svg');
+    var ready = svg && svg.querySelectorAll('.node, .cluster').length > 0;
+    if (ready) {
+      clearInterval(wireTimer);
+      fitToWindow();
+      wireTooltips();
+    } else if (wireAttempts > 100) {
+      clearInterval(wireTimer); // se rindio tras 10s -- algo fue mal en el render de mermaid
+    }
+  }, 100);
+
+  document.querySelectorAll('#legend input[type=checkbox]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var cat = cb.value;
+      var display = cb.checked ? '' : 'none';
+      document.querySelectorAll('.cat_' + cat).forEach(function(el) {
+        el.style.display = display;
+      });
+    });
+  });
+</script>
+</body>
+</html>

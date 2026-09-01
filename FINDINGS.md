@@ -6746,3 +6746,204 @@ sobre qué contenido de sonido/música corresponde a qué.
 **Verificado**: `py tools/build_all.py` sin errores, `py
 tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
 `.tzx` original**.
+
+## Sesión 56 (continuación 34) — `recursos/` puesto al día y pulido a "release candidate"
+
+Petición del usuario: revisar los documentos de `recursos/`, ponerlos
+al día (varios describían el motor como "sin analizar" pese a que la
+ingeniería inversa está cerrada desde la continuación 32) y pulirlos
+a una versión definitiva, simplificando contenido y eliminando texto
+de pasos intermedios.
+
+**`flujo_programa.html`**: la nota introductoria y el diagrama de
+arranque (§1) se detenían justo en `MOTOR_INICIO`, marcado "sin
+analizar todavía" — desactualizado desde antes de esta sesión.
+Extendido el diagrama con la secuencia real de arranque del motor
+(`INICIO` → `ACTIVAR_INTERRUPCION_MODO_2` → `ESPERAR_TECLA_INICIO` →
+`REINICIAR_PARTIDA`/`PANTALLA_PRESENTACION_NIVEL` →
+`PREPARAR_INICIO_NIVEL` → `BUSCAR_COLUMNA_HUD` →
+`BUCLE_PRINCIPAL_JUEGO`) y la caja de `portada_body.asm` pasada de
+"pendiente" a "resuelta". Añadidas 3 secciones nuevas: §2 tabla de
+despacho `TABLA_SALTOS_MOTOR` (11 entradas, ninguna con llamador real
+— a diferencia de MSX, donde el slot 0 sí tiene llamadores), §3
+despachador `TABLA_MANEJADORES_LOSETA` (20 entradas) y §4 variables
+de estado compartido clave. §5 "Pendientes menores" reescrita a los 2
+puntos genuinos que quedan. Inventario renumerado a §6 (sin cambios
+de contenido, sigue generado por `gen_inventory.py`).
+
+**`mapa_memoria.html`**: 3 segmentos seguían marcados
+"sin analizar"/"mecánico" pese a estar ya resueltos semanas atrás
+(`$62C9-$62E1` es `DIBUJAR_CAMBIO_LOSETA`, `$C5DE-$C5FF` es relleno a
+cero, los 49 fragmentos de música) — la propia nota de "Pendiente"
+de la continuación 29 ya lo señalaba sin que se hubiera corregido el
+documento. Corregido `DIBUJAR_CREDITOS_MENU` → `DIBUJAR_CREDITOS`
+(renombrada en algún momento posterior a cuando se escribió ese
+segmento, sin propagar el cambio). Corregida la nota de
+`MAD-MIX.bas (portada)` en la tabla de ficheros, que aún decía
+"4188 bytes sin analizar todavía" pese a que la portada es fichero
+cerrado desde las sesiones 4-20. Comprimida la nota introductoria
+(~70 líneas enumerando cada subsistema resuelto sesión a sesión) a un
+párrafo corto y preciso. Eliminada la categoría "mecánico" de la
+leyenda (0 segmentos la usan ya).
+
+**`mapa_memoria_logotopo.html`** / **`graficos.html`** /
+**`logotopo_formas.html`**: correcciones menores — leyenda con una
+categoría sin uso, nota que anunciaba secciones "por venir" que ya
+existían, y una afirmación obsoleta sobre que "SOFT" y las letras de
+"TOPO" usarían una rutina de dibujo distinta a la de la estrella
+(`DIBUJAR_FORMA_LOGO`) — en realidad todas comparten
+`DIBUJAR_FORMA_ANIMADA`, la única rutina de bajo nivel del logo.
+
+`portada.html` y `sprites.html` revisados, sin cambios — ya estaban
+al día.
+
+**Corrección adicional** (detectada al construir `flujo_secuencial.html`,
+ver continuación siguiente): el flow-note de sonido de
+`flujo_programa.html` decía que `ISR_SONIDO` "corre dentro de esa
+misma interrupción" que `ENTRADA_INTERRUPCION_VBLANK` — INCORRECTO.
+`REPRODUCIR_SONIDO` en realidad **sustituye** el vector IM2
+($6061-$6062) por `ISR_SONIDO` mientras suena, y bloquea el resto del
+juego en un bucle de sondeo de teclado en primer plano
+(`BUCLE_TONO_CANAL_A`) hasta que la canción termina o se pulsa una
+tecla. Corregido.
+
+No aplica verificación de `.tzx` (cambios solo en `recursos/`, ningún
+fichero fuente de `src/` tocado).
+
+## Sesión 56 (continuación 35) — creados `flujo_detallado.html` y `flujo_secuencial.html`, análogos a los del proyecto MSX
+
+Petición del usuario: MSX tiene 2 documentos de flujo más
+(`flujo_detallado.html`, grafo de llamadas real; `flujo_secuencial.html`,
+diagrama del orden de ejecución) que Spectrum no tenía — crear los
+equivalentes.
+
+**`tools/gen_flow_diagram.py`** (nuevo, adaptado del homónimo de
+MSX): genera `flujo_detallado.html` a partir del grafo de llamadas
+`CALL` real entre las 82 etiquetas "función" de `gen_inventory.py`
+(mismo criterio de alcance que MSX: sin manejadores de tabla de
+salto, sin aristas atribuidas a un origen no fiable). `CATEGORY`
+propia con las 82 funciones clasificadas a mano en 7 subsistemas
+(arranque/portada 18, motor 14, ítems 10, HUD 12, menú 10, sonido 4,
+gráficos 14) — ninguna cae en "sin clasificar". Ejecutado:
+82 nodos, 28 aristas, 206 CALL descartados por no tener un nodo
+origen fiable (misma proporción que MSX).
+
+**`recursos/flujo_secuencial.html`** (nuevo, curado a mano —
+mismo criterio que el de MSX, no autogenerado): diagrama Mermaid del
+ORDEN REAL de ejecución, trazado línea a línea contra
+`src/madmix_body.asm`: cadena de arranque → interrupción IM2 en
+paralelo (con el hallazgo de que `REPRODUCIR_SONIDO` sustituye ese
+vector y bloquea el juego mientras suena, ver continuación anterior)
+→ pantalla de título (`ESPERAR_TECLA_INICIO`) → doble reentrada
+`REINICIAR_PARTIDA`/`PANTALLA_PRESENTACION_NIVEL` → menú de
+controles (`PROCESAR_MENU_CONTROLES`, con el detalle real de que
+`SELECCIONAR_SINCLAIR`/`SELECCIONAR_KEMPSTON` retornan directamente
+sin limpiar la pantalla del menú, a diferencia de las otras 3
+opciones) → modo demo (`INICIAR_DEMO`, ciclador de 4 niveles
+pregrabados) → presentación de nivel (`PREPARAR_INICIO_NIVEL`,
+`BUSCAR_COLUMNA_HUD`) → bucle de cada frame
+(`BUCLE_PRINCIPAL_JUEGO`/`MOTOR_MOVIMIENTO_COLISION`, con el
+despacho completo a los 17 manejadores de `TABLA_MANEJADORES_LOSETA`
+y las 3 franjas SIEMPRE/CONDICIONAL/EVENTO). Mismo motor visual que
+el de MSX (Mermaid.js, zoom/tooltip/leyenda por checkbox), reescrito
+para reflejar la estructura real de Spectrum en vez de copiar la de
+MSX.
+
+**Hallazgo real durante la construcción** (no solo redacción): la
+lógica de "resta 1 vida" en `BUCLE_PRINCIPAL_JUEGO` está anidada
+DENTRO de la comprobación de cuenta atrás de `MODO_ESPECIAL_ACTIVO`
+— la resta (`VIDAS_RESTANTES += ($6003)`) solo se ejecuta cuando esa
+cuenta atrás llega a 0, no en un sitio separado. El código ya lo
+documentaba así (comentario de cabecera de sesiones previas); esta
+continuación solo lo verificó instrucción a instrucción para
+representarlo correctamente en el diagrama.
+
+No aplica verificación de `.tzx` (documentación + herramienta nueva,
+ningún fichero fuente de `src/` tocado).
+
+## Sesión 56 (continuación 36) — confirmado por simulación: Spectrum SÍ tiene un lienzo de laberinto en RAM (como MSX), pero NO necesita buffer de actores
+
+Petición del usuario: comparando `mapa_memoria.html` de MSX (que
+documenta un "buffer de render de actores" en `$0500-$1000` y un
+"lienzo de bitmap en RAM" en `$DE04`) contra el de Spectrum, preguntó
+si Spectrum tiene equivalentes — y pidió investigarlo a fondo con
+evidencia real, no solo razonamiento a mano.
+
+**Herramienta nueva**: `tools/mmcanvas_sim.py`, un simulador Z80 mucho
+más completo que `mmesquema_sim.py` (cobertura razonable de los
+juegos de opcodes sin prefijo, CB, ED, DD/FD — IX principalmente, que
+es el único que usan estas rutinas), construido específicamente para
+esta pregunta siguiendo la misma filosofía del proyecto: ejecutar el
+código real sobre una copia real de `FISICO/CODE.bin` y observar
+dónde escribe de verdad, en vez de deducirlo a mano (código
+automodificable y memoria reciclada hacían el razonamiento manual
+poco fiable).
+
+### Confirmado: SÍ hay un lienzo de laberinto en RAM, más grande de lo documentado hasta ahora
+
+`GESTIONAR_SCROLL`, `REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM` y
+`REDIBUJAR_LOSETA_BUFFER_VRAM` (y por tanto `DIBUJAR_CAMBIO_LOSETA`,
+que llama a esta última cada vez que una loseta cambia en vivo — p.
+ej. al comerse una bolita) **no escriben en la pantalla real**
+(`$4000-$57FF`): escriben en una zona de trabajo en RAM que arranca
+en `$E404` y que la simulación confirma que llega hasta al menos
+`$F88C` — mucho más allá de lo que `mapa_memoria.html` documentaba
+como límite de `BITMAP_MARCO_DECORATIVO` (`$EFA1`). Es la misma
+memoria que ocupaba el bitmap RLE comprimido del marco decorativo,
+reciclada una vez `CARGAR_MARCO_DECORATIVO` ya la consumió — el
+equivalente real y directo del "lienzo de bitmap en RAM" que MSX
+mantiene en `$DE04` (mismos 3 últimos dígitos de dirección, `xE04`,
+coincidencia nada casual dado que MSX es un port de este código).
+
+**Corrección importante**: esto significa que la nota anterior sobre
+`LOADER.bin` ("ya se ejecutó... pero sigue residente en RAM, nada lo
+sobrescribe después") era una suposición sin verificar — SÍ se
+sobrescribe, en tiempo de ejecución, por este mismo lienzo (su rango,
+`$EFB6-$F07A`, cae dentro de la zona de escritura confirmada). Sin
+consecuencia real: para cuando el lienzo lo usa, `LOADER.bin` ya
+cumplió su única función.
+
+Solo el HUD (marcador de puntos, iconos de vida) se dibuja aparte,
+directo a pantalla real, vía `CALCULAR_DIRECCION_PANTALLA` — confirmado
+revisando sus 5 únicos llamadores en todo el fichero, ninguno
+relacionado con el lienzo del laberinto.
+
+### Confirmado: NO hace falta un buffer de actores separado (a diferencia de MSX)
+
+`MOTOR_ACTORES` calcula la dirección de pantalla REAL del actor con
+`CALCULAR_DIRECCION_PANTALLA` y la guarda directamente en el registro
+del actor (`TABLA_ACTORES_ACTIVOS`, offset+2/+3) — confirmado leyendo
+el código fuente directamente (sin ambigüedad ni automodificación
+posible en este punto). `DIBUJAR_ACTORES_PENDIENTES` compone el
+sprite (máscara AND + patrón OR) DIRECTAMENTE sobre esa dirección
+real, sin ningún paso intermedio. Tiene sentido arquitectónico: el
+Spectrum tiene la pantalla mapeada en memoria normal, así que el CPU
+ya puede escribir en ella sin restricción — el paso extra que MSX
+necesita (su VDP solo es accesible por puertos, más lento) no hace
+falta aquí.
+
+### Pendiente: el mecanismo de volcado del lienzo a pantalla real no se ha localizado
+
+Búsqueda exhaustiva sin éxito: los 5 llamadores de
+`CALCULAR_DIRECCION_PANTALLA` (los mismos de arriba, todos HUD/texto),
+el cuerpo completo de `WAIT_VBLANK` (solo `EI`/`HALT`, nada más) y de
+`TICK_REDIBUJADO_VBLANK` (solo `REFRESCAR_ESQUEMA_COLOR_NIVEL` +
+`DIBUJAR_ACTORES_PENDIENTES`), y confirmado que el operando `$E404`
+de estas instrucciones no se automodifica en ningún sitio del
+fichero. El juego es jugable y el laberinto se ve correctamente en
+pantalla real, así que el volcado tiene que existir en algún punto —
+candidato razonable para una sesión futura con más herramientas (un
+emulador con salida de vídeo real permitiría observar el efecto en
+vivo en vez de deducirlo del código estático).
+
+**Documentación actualizada**: `recursos/mapa_memoria.html` — el
+segmento `BITMAP_MARCO_DECORATIVO` ampliado con esta nota; nuevo
+segmento `$EFA2-$F88C` (antes repartido entre "relleno a cero" y
+`LOADER.bin`, ahora unificado como "lienzo de trabajo del laberinto
+en RAM"); ajustado el límite del segmento "sistema/BASIC" siguiente
+(antes empezaba en `$F07A`, ahora en `$F88C`); segmento
+`MOTOR_ACTORES` ampliado con el hallazgo sobre actores. Total de
+segmentos: 66 (antes 67, al fusionar 2 en 1).
+
+No aplica verificación de `.tzx` (investigación + documentación +
+herramienta nueva, ningún fichero fuente de `src/` tocado).

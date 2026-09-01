@@ -99,17 +99,27 @@ Estructura del repositorio
 - `tools/` — `zxbasic_tool.py` (detokenizador BASIC), `dasm2asm.py`
   (conversor Z80Dasm → SjASMPlus), `build_all.py`, `gen_tzx_file.py`,
   `gen_inventory.py` (inventario de etiquetas → `flujo_programa.html`),
+  `gen_flow_diagram.py` (grafo de llamadas → `flujo_detallado.html`),
   `mmlvl_tool.py` (niveles), `mmsnd_tool.py`/`mmsnd_render.py`
   (extracción y renderizado a `.wav` de la música/efectos) y
   `mmesquema_sim.py` (simulador Z80 mínimo usado para verificar el
-  esquema de color del HUD por ejecución real, no solo lectura).
+  esquema de color del HUD por ejecución real, no solo lectura) y
+  `mmcanvas_sim.py` (simulador Z80 más completo, usado para localizar
+  el lienzo de trabajo del laberinto en RAM y confirmar que los
+  actores se dibujan directo a pantalla real, sin buffer intermedio).
 - `manuales/` — manuales técnicos de referencia (aún por crear).
 - `recursos/` — visores HTML autocontenidos: `mapa_memoria.html`
   (distribución de la RAM 0x0000-0xFFFF), `mapa_memoria_logotopo.html`
   (zoom al rango `$EA60-$FADD` donde se dibuja el logo animado, misma
   memoria que luego reutiliza el motor), `flujo_programa.html`
-  (diagrama de arranque + inventario buscable de las etiquetas de
-  todos los ficheros fuente, regenerado con `tools/gen_inventory.py`),
+  (diagrama de flujo grande + tabla de despacho del motor +
+  despachador de tipo de loseta + variables de estado + inventario
+  buscable de las etiquetas de todos los ficheros fuente, regenerado
+  con `tools/gen_inventory.py`), `flujo_detallado.html` (grafo de
+  llamadas real entre las 82 funciones del motor, agrupado por
+  subsistema, regenerado con `tools/gen_flow_diagram.py`),
+  `flujo_secuencial.html` (diagrama del orden real de ejecución,
+  arranque → título → menú → partida frame a frame, curado a mano),
   `logotopo_formas.html` (las 15 formas del logo de Topo Soft ya
   identificadas — SOFT×7, T-O-P-O, estrella×4 — con controles
   ajustables en vivo), `portada.html` (visor de la portada animada
