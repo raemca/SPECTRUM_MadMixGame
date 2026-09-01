@@ -7067,3 +7067,61 @@ en `src/madmix_body.asm` (solo el comentario — recompilado y verificado
 **Verificado**: `py tools/build_all.py` sin errores, `py
 tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
 `.tzx` original** (cambio de comentario únicamente).
+
+## Sesión 56 (continuación 39) — algoritmo de `BUCLE_MEZCLA_ESQUEMA_COLOR` derivado instrucción a instrucción
+
+Petición del usuario: "busca ese algoritmo que tiene la danza densa
+de push/pop con sp dirigido" — completar el hallazgo de la
+continuación 38 explicando CÓMO funciona, no solo QUÉ hace.
+
+**Técnica**: se instrumentó `tools/mmcanvas_sim.py` para registrar
+cada `LD SP,IX`/`LD SP,HL` (nuevo `CPU.trace_sp`/`sp_log`) — cada
+"salto" de `SP` revela exactamente qué dirección visita la rutina y
+en qué orden, sin necesidad de reconstruir el flujo de datos a mano.
+Con un nivel real cargado y el lienzo ya "sucio", el log de saltos
+mostró un patrón nítido y repetitivo: `$E400, $4050, $E410, $405C,
+$E420, $4150, $E430, $415C, ...` — alternando entre el lienzo
+(paso 16) y direcciones de pantalla real muy concretas.
+
+**El algoritmo**: `CALCULAR_DIRECCION_PANTALLA` es cara (~10
+instrucciones de rotación de bits para resolver el direccionamiento
+entrelazado del Spectrum). En vez de pagar ese coste una vez por byte
+cada fotograma (3456 veces), el juego lo paga **una sola vez por
+nivel**: `PREPARAR_TABLA_ESQUEMA_COLOR` calcula 288 direcciones (2
+por cada una de las 144 filas jugables — columna de carácter 16 y
+28) y las deja **ya resueltas** dentro de la propia tabla de trabajo
+en RAM (`$E400+`, la misma zona que usa el lienzo). Cada VBLANK
+relevante, `BUCLE_MEZCLA_ESQUEMA_COLOR` recorre esa tabla: por cada
+fila, `POP` 16 bytes desde el lienzo — el primer `POP` (a `IX`) trae
+precisamente la dirección de pantalla ya calculada para la columna
+16. Con `LD SP,IX` el código "salta" a esa dirección real y hace 2
+`PUSH` de 6 bytes (banco de registros normal + alterno vía `EXX`, 12
+bytes en total) que, como `PUSH` decrementa antes de escribir, caen
+**hacia atrás** desde el ancla, cubriendo las columnas 4-15. La misma
+danza se repite con la segunda ancla (columna 28), cubriendo las
+columnas 16-27. Entre las dos, las 24 columnas exactas del área
+jugable de esa fila — sin huecos ni solape.
+
+**Verificado con precisión total** (`tools/mmcanvas_sim.py`, test 6):
+para la fila lógica 0 del lienzo, las 2 anclas leídas fueron
+`$4050`/`$405C` (columnas 16/28 reales), las 24 columnas 4-27 de
+pantalla real quedaron cubiertas exactamente, y el contenido copiado
+es **idéntico byte a byte y sin transformación** al del lienzo
+(`fd 60 fd 60 80 00 80 00...` en ambos). El avance a la fila
+siguiente sale de un segundo puntero (`HL`) leído en la misma pasada
+(el "encadenado" de paso 32 que la tabla también dejó preparado) —
+por eso el bucle entrelaza dos cadenas (`IX` y `HL`) en vez de
+incrementar un único puntero.
+
+**Documentación actualizada**: cabecera completa de
+`BUCLE_MEZCLA_ESQUEMA_COLOR` en `src/madmix_body.asm` (solo
+comentario — recompilado, **0 diferencias**), `mapa_memoria.html`,
+`flujo_programa.html` (movido de "pendientes" a nota resuelta) y
+`tools/mmcanvas_sim.py` (docstring + test 6 nuevo). Con esto se cierra
+por completo la investigación del lienzo del laberinto iniciada en la
+continuación 36: existencia confirmada, buffer de actores corregido,
+mecanismo de volcado localizado, y ahora su algoritmo exacto.
+
+**Verificado**: `py tools/build_all.py` sin errores, `py
+tools/gen_tzx_file.py` → **0 diferencias, 48485 bytes idénticos al
+`.tzx` original** (cambio de comentario únicamente).

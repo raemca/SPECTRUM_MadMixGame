@@ -430,28 +430,28 @@
 <h2>5. Pendientes menores</h2>
 <p style="max-width:60rem;">
   La ingeniería inversa y reconstrucción semántica están cerradas.
-  Solo quedan detalles menores, de baja prioridad, sin evidencia
-  adicional que permita resolverlos con las herramientas actuales del
+  Solo queda un detalle menor, de baja prioridad, sin evidencia
+  adicional que permita resolverlo con las herramientas actuales del
   proyecto (ver "Pendiente para próximas sesiones" en
   <code>src/FINDINGS.md</code>):
 </p>
 <ul style="max-width:60rem;">
-  <li>El motor compone el laberinto en un lienzo de trabajo en RAM
-  (<code>$E404</code> en adelante, reutilizando la memoria del bitmap
-  del marco decorativo) y lo vuelca a pantalla real desde
-  <code>BUCLE_MEZCLA_ESQUEMA_COLOR</code> (dentro de
-  <code>REFRESCAR_ESQUEMA_COLOR_NIVEL</code>, cada VBLANK relevante) —
-  confirmado por simulación (<code>tools/mmcanvas_sim.py</code>, ver
-  <code>mapa_memoria.html</code>). El algoritmo exacto de esa rutina
-  (una cadena de nodos recorrida con <code>SP</code> redirigido) no se
-  ha derivado instrucción a instrucción, solo confirmado por su
-  efecto.</li>
   <li><code>$6047-$604A</code> (4 bytes, junto a
   <code>TABLA_PISTAS_TANQUE_AVION</code>) y <code>$604B-$605F</code>
   (26 bytes) siguen sin identificar: ningún código del fichero los
   referencia, así que no hay ni un uso ni una comparación con MSX de
   donde partir.</li>
 </ul>
+<p style="max-width:60rem;color:var(--muted);font-size:0.9rem;">
+  El motor compone el laberinto en un lienzo de trabajo en RAM
+  (<code>$E404</code> en adelante, reutilizando la memoria del bitmap
+  del marco decorativo) y lo vuelca a pantalla real desde
+  <code>BUCLE_MEZCLA_ESQUEMA_COLOR</code> (dentro de
+  <code>REFRESCAR_ESQUEMA_COLOR_NIVEL</code>, cada VBLANK relevante) —
+  algoritmo derivado por completo por simulación
+  (<code>tools/mmcanvas_sim.py</code>, ver <code>mapa_memoria.html</code>
+  y la cabecera de esa rutina en <code>src/madmix_body.asm</code>).
+</p>
 
 <h2>6. Inventario completo (717 etiquetas, clasificadas y buscables)</h2>
 <p>

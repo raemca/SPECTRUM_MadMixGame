@@ -5184,37 +5184,51 @@ BUCLE_RELLENAR_ATRIBUTOS_HUD:
     OUT ($FF),A
     LD ($91CC),SP
     LD IX,$E400
-; --- BUCLE_MEZCLA_ESQUEMA_COLOR (antes CODE_95FB): MECANISMO
-; VERIFICADO POR SIMULACION Z80 REAL sesion 56 (extension del mismo
-; enfoque de tools/mmsnd_render.py -- ejecutar el codigo de verdad en
-; vez de razonarlo a mano; ver scratchpad/sim_refrescar.py de esta
-; sesion). Con IX apuntando a un "nodo" (10 bytes: puntero-siguiente-
-; IX, HL, AF, DE, BC), usa "LD SP,IX" para leer/escribir 8 palabras
-; consecutivas con POP/PUSH (maxima velocidad Z80, sin LD/INC),
-; alternando entre el banco de registros normal y el alterno (EXX) --
-; y repite la misma danza una SEGUNDA vez usando como puntero el valor
-; de HL leido en la primera mitad, en vez de IX. Esto entrelaza DOS
-; cadenas (la de IX y la de HL) en cada pasada, de forma que el nuevo
-; IX de la siguiente iteracion sale de la cadena de HL, no de la
-; propia cadena de IX. Repite hasta que el byte alto de IX llega a 0.
+; --- BUCLE_MEZCLA_ESQUEMA_COLOR (antes CODE_95FB): es EL VOLCADO del
+; lienzo de GESTIONAR_SCROLL/REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM
+; ($E404 en adelante) a la pantalla REAL entrelazada -- ALGORITMO
+; DERIVADO POR COMPLETO (sesion 56, tools/mmcanvas_sim.py, instrumentado
+; para registrar cada "LD SP,xx"): la tecnica es amortizar el coste de
+; CALCULAR_DIRECCION_PANTALLA (~10 instrucciones de rotacion de bits)
+; calculandolo UNA SOLA VEZ por nivel (en PREPARAR_TABLA_ESQUEMA_COLOR,
+; ver su cabecera) en vez de una vez por byte cada fotograma.
 ;
-; CORRECCION IMPORTANTE (sesion 56, continuacion posterior -- ver
-; FINDINGS.md): la nota anterior de esta cabecera decia "IDEMPOTENTE,
-; toca un pequeño conjunto fijo de bytes, candidato a parpadeo puntual
-; de 1-2 celdas del HUD" -- eso solo se habia probado con el lienzo de
-; GESTIONAR_SCROLL/REDIBUJAR_PANTALLA_COMPLETA_BUFFER_VRAM ($E404 en
-; adelante, ver su cabecera) VACIO/sin datos de nivel reales. Con un
-; nivel real cargado primero (tools/mmcanvas_sim.py), la MISMA rutina
-; escribe 3456 direcciones de pantalla real (144 de las 192 lineas de
-; pixel, $4044-$577B, exactamente el area jugable sin el marco),
-; estable fotograma a fotograma, y el contenido resultante coincide
-; BYTE A BYTE con el contenido del lienzo en ese momento. CONFIRMADO:
-; esta rutina, llamada cada VBLANK relevante via TICK_REDIBUJADO_VBLANK,
-; es el mecanismo que traduce el lienzo LINEAL en RAM a la pantalla
-; REAL entrelazada -- la pieza que le faltaba al hallazgo del lienzo.
-; El algoritmo exacto (que hace cada nodo con el direccionamiento
-; entrelazado) no se ha derivado instruccion a instruccion, solo
-; confirmado por su efecto observado.
+; PREPARAR_TABLA_ESQUEMA_COLOR deja, dentro de cada fila de 31 bytes de
+; su tabla (144 filas, una por linea de pixel jugable, $E400+), DOS
+; direcciones de pantalla real YA RESUELTAS: offset+0/+1 = direccion de
+; la columna de caracter 16, offset+28/+29 = columna 28 (288 llamadas a
+; CALCULAR_DIRECCION_PANTALLA en total, no 3456).
+;
+; Este bucle recorre esa tabla usando CADA direccion pre-calculada como
+; nuevo valor de SP: "LD SP,IX / POP IX/HL/AF/DE/BC / EXX / POP HL/DE/BC"
+; lee 16 bytes seguidos DEL LIENZO (SP=IX apunta dentro de la fila de
+; datos del laberinto, no de la tabla de direcciones) -- de ellos, el
+; primer POP (a IX) trae la direccion de pantalla YA CALCULADA (la de
+; columna 16, guardada ahi por PREPARAR_TABLA_ESQUEMA_COLOR). Con
+; "LD SP,IX" el codigo salta a ESA direccion real y hace 2 PUSH de 6
+; bytes cada uno (banco normal y alterno via EXX, 12 bytes en total) --
+; como PUSH decrementa antes de escribir, esos 12 bytes caen HACIA ATRAS
+; desde el ancla, cubriendo las columnas 4-15. La misma danza se repite
+; una segunda vez con el segundo ancla (columna 28, tambien leido del
+; mismo tramo), escribiendo hacia atras las columnas 16-27 -- entre los
+; dos anclajes, las 24 columnas EXACTAS del area jugable de esa fila,
+; sin huecos ni solape. Verificado columna a columna: pantalla[fila,
+; columna 4..27] = lienzo[fila, byte 0..23], copia directa sin
+; transformacion (el "trabajo" ya lo hizo la formula de direccionamiento
+; al escribir las 2 anclas). El avance a la SIGUIENTE fila sale del
+; propio HL leido en esta pasada (el "encadenado" de paso 32 que
+; PREPARAR_TABLA_ESQUEMA_COLOR tambien dejo preparado) -- por eso el
+; bucle entrelaza la cadena de IX con la de HL en vez de solo incrementar
+; un puntero. Repite hasta que el byte alto de IX llega a 0 (fin de las
+; 144 filas).
+;
+; VERIFICADO por simulacion (sesion 56): con un nivel real cargado antes
+; (no el lienzo vacio, que fue el error de una caracterizacion previa de
+; esta cabecera), escribe 3456 direcciones de pantalla real (144 filas x
+; 24 columnas, $4044-$577B) cada VBLANK relevante (llamada desde
+; REFRESCAR_ESQUEMA_COLOR_NIVEL via TICK_REDIBUJADO_VBLANK), estable
+; fotograma a fotograma. Cierra el hallazgo del lienzo: ya no falta
+; ninguna pieza del mecanismo de dibujado del laberinto.
 ; ---
 BUCLE_MEZCLA_ESQUEMA_COLOR:
     LD SP,IX

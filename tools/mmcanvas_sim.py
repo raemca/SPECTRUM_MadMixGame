@@ -51,11 +51,29 @@ la MISMA rutina escribe 3456 direcciones de pantalla real (144 de
 las 192 lineas de pixel, $4044-$577B -- exactamente el area jugable,
 sin el marco decorativo), estable fotograma a fotograma, y el
 contenido resultante en pantalla real coincide BYTE A BYTE con el
-contenido del lienzo en ese momento. El algoritmo exacto (una cadena
-de nodos de 10 bytes recorrida con SP redirigido via PUSH/POP,
-alternando banco de registros con EXX) no se ha derivado instruccion
-a instruccion -- confirmado solo por su efecto observado, mismo
-enfoque que el resto de este fichero.
+contenido del lienzo en ese momento.
+
+ALGORITMO DERIVADO POR COMPLETO (misma sesion, instrumentando este
+simulador para registrar cada "LD SP,xx" -- ver CPU.trace_sp/sp_log):
+la tecnica es amortizar el coste de CALCULAR_DIRECCION_PANTALLA (~10
+instrucciones de rotacion de bits) calculandolo UNA SOLA VEZ por
+nivel (PREPARAR_TABLA_ESQUEMA_COLOR, 288 llamadas) en vez de una vez
+por byte cada fotograma (3456 veces). PREPARAR_TABLA_ESQUEMA_COLOR
+deja, dentro de cada fila de 31 bytes de su tabla (144 filas, $E400+),
+2 direcciones de pantalla real YA RESUELTAS (columnas de caracter 16
+y 28). BUCLE_MEZCLA_ESQUEMA_COLOR lee 16 bytes seguidos DEL LIENZO
+(no de la tabla de direcciones) via POP con SP redirigido -- el
+primer POP trae la direccion de columna 16 ya calculada, que pasa a
+ser el SIGUIENTE SP: dos PUSH de 6 bytes (banco normal + alterno via
+EXX, 12 bytes) caen HACIA ATRAS desde ese ancla (PUSH decrementa
+antes de escribir), cubriendo las columnas 4-15. La misma danza se
+repite con el segundo ancla (columna 28), cubriendo 16-27 -- entre
+los dos, las 24 columnas EXACTAS del area jugable de esa fila, sin
+huecos ni solape. El avance a la fila siguiente sale de un segundo
+puntero (HL) leido en la misma pasada (el "encadenado" de paso 32 que
+la tabla tambien dejo preparado). Ver la cabecera de
+BUCLE_MEZCLA_ESQUEMA_COLOR en src/madmix_body.asm para el detalle
+instruccion a instruccion.
 
 Uso:
   py tools/mmcanvas_sim.py
@@ -107,6 +125,8 @@ class CPU:
         self.trace_writes = False
         self.ports_in = {}
         self.io_reads = []
+        self.sp_log = []       # (pc, origen: 'HL'/'IX', nuevo SP) cada LD SP,HL / LD SP,IX
+        self.trace_sp = False
 
     def rb(self, a): return self.mem[a & 0xFFFF]
     def wb(self, a, v):
@@ -323,7 +343,9 @@ class CPU:
             de, hl = self.DE(), self.HL(); self.setDE(hl); self.setHL(de); self.t += 4
         elif op == 0xF3: self.IFF = False; self.t += 4
         elif op == 0xFB: self.IFF = True; self.t += 4
-        elif op == 0xF9: self.SP = self.HL(); self.t += 6
+        elif op == 0xF9:
+            self.SP = self.HL(); self.t += 6
+            if self.trace_sp: self.sp_log.append((pc0, 'HL', self.SP))
 
         elif op == 0xCB:
             op2 = self.fetch()
@@ -416,7 +438,9 @@ class CPU:
             elif op2 == 0x2A: a = self.fetch16(); self.IX = self.rw(a); self.t += 20
             elif op2 == 0xE5: self.push(self.IX); self.t += 15
             elif op2 == 0xE1: self.IX = self.pop(); self.t += 14
-            elif op2 == 0xF9: self.SP = self.IX; self.t += 10
+            elif op2 == 0xF9:
+                self.SP = self.IX; self.t += 10
+                if self.trace_sp: self.sp_log.append((pc0, 'IX', self.SP))
             elif op2 == 0xE9: self.PC = self.IX; self.t += 8
             elif op2 == 0x23: self.IX = (self.IX + 1) & 0xFFFF; self.t += 10
             elif op2 == 0x2B: self.IX = (self.IX - 1) & 0xFFFF; self.t += 10
@@ -592,13 +616,37 @@ def main():
     print(f"  primeros 16 bytes de pantalla ($4044): {screen_sample.hex(' ')}")
     print(f"  coinciden byte a byte: {canvas_snapshot == screen_sample}")
 
+    # test 6: el algoritmo -- las 2 direcciones "ancla" ya calculadas por
+    # PREPARAR_TABLA_ESQUEMA_COLOR para la fila 0 (offset 0/+28 de la
+    # tabla), y como los 2 bloques de 12 bytes que cuelgan de cada ancla
+    # cubren, entre los dos, las 24 columnas exactas del area jugable
+    def y_x(addr):
+        off = addr - 0x4000
+        y = ((off >> 11 & 3) << 6) | ((off >> 5 & 7) << 3) | (off >> 8 & 7)
+        return y, off & 0x1F
+
+    anchor16 = cpu5.rw(0xE400)
+    anchor28 = cpu5.rw(0xE41C)
+    row0 = sorted((y_x(a)[1], cpu5.mem[a]) for a in screen_addrs if y_x(a)[0] == 16)
+    print(f"\nTest 6 -- algoritmo (fila logica 0 del lienzo, Y=16 en pantalla):")
+    print(f"  ancla columna 16 (offset $E400/E401): ${anchor16:04X}")
+    print(f"  ancla columna 28 (offset $E41C/E41D): ${anchor28:04X}")
+    print(f"  columnas cubiertas: {[x for x, _v in row0]} ({len(row0)} de 24)")
+    canvas_row0 = bytes(cpu5.mem[0xE404:0xE404 + 24])
+    screen_row0 = bytes(v for _x, v in row0)
+    print(f"  lienzo[fila 0, byte 0-23]  = {canvas_row0.hex(' ')}")
+    print(f"  pantalla[Y=16, col 4-27]   = {screen_row0.hex(' ')}")
+    print(f"  copia directa sin transformacion: {canvas_row0 == screen_row0}")
+
     print("\n" + "=" * 70)
     print("CONCLUSION: el laberinto se compone en un lienzo de RAM ajeno a")
     print("la pantalla real (tests 1-3) -- solo el HUD/iconos escriben en")
     print("pantalla real dentro de esas rutinas. El volcado del lienzo a")
     print("pantalla real lo hace REFRESCAR_ESQUEMA_COLOR_NIVEL/")
     print("BUCLE_MEZCLA_ESQUEMA_COLOR (test 5), llamada cada VBLANK relevante")
-    print("via TICK_REDIBUJADO_VBLANK -- ver docstring para el detalle.")
+    print("via TICK_REDIBUJADO_VBLANK. El algoritmo (test 6): 2 direcciones")
+    print("de pantalla pre-calculadas por fila sirven de 'ancla' para 2")
+    print("bloques de 12 bytes escritos hacia atras con PUSH -- ver docstring.")
     print("Los ACTORES tienen su propio buffer de render aparte (bump-")
     print("allocator en $F701+, test 4) -- equivalente real al de MSX.")
 
